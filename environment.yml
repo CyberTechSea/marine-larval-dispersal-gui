@@ -1,0 +1,30 @@
+name: sim_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  # ── Core simulation stack — pinned together to avoid conflicts ──
+  - parcels=3.0.2
+  - numpy=1.26.4
+  - zarr=2.16.1
+  - numcodecs=0.11.0
+  # ── Scientific stack ───────────────────────────────────────────
+  - netCDF4
+  - xarray
+  - cartopy
+  - matplotlib
+  - pandas
+  - scipy
+  # ── Backend ────────────────────────────────────────────────────
+  - pip
+  - pip:
+    - fastapi==0.111.0
+    - uvicorn[standard]==0.29.0
+    - python-multipart==0.0.9
+  # NOTE: copernicusmarine must be installed in a SEPARATE environment
+  # (cmems_download) because it requires zarr>=2.18 and numpy>=2.1,
+  # which conflict with OceanParcels 3.0.2.
+  # Run: conda create -n cmems_download python=3.11 -y
+  #      conda activate cmems_download
+  #      pip install copernicusmarine

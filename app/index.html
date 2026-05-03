@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marine Larval Dispersal — OceanParcels/CMEMS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --deep:#0a1628; --mid:#0d2240; --light:#13305a; --surface:#1a4a7a;
+  --water:#2196c4; --water-lt:#4db8e8; --foam:#00d4aa; --foam-dk:#00a882;
+  --coral:#ff6b4a; --gold:#f0b429; --worms:#2e7d32; --worms-lt:#66bb6a;
+  --txt:#e8f0f8; --txt2:#8ab0cc; --muted:#4a6880;
+  --border:rgba(42,100,148,0.32); --panel:rgba(10,22,40,0.96);
+  --card:rgba(13,34,64,0.85); --inp:rgba(10,22,40,0.55);
+  --r:10px; --rs:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 80%,rgba(33,150,196,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 20%,rgba(0,212,170,.05) 0%,transparent 50%),linear-gradient(160deg,#0a1628 0%,#0d2240 50%,#0a1628 100%);pointer-events:none;z-index:0}
+
+/* HEADER */
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:50px;background:rgba(10,22,40,.97);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-img{width:38px;height:38px;object-fit:contain;border-radius:0;background:transparent}
+.logo-text{font-family:'Fraunces',serif;font-size:15px;font-weight:600}
+.logo-text span{color:var(--foam)}
+.hdr-meta{display:flex;align-items:center;gap:8px}
+.badge{font-family:'DM Mono',monospace;font-size:9.5px;padding:2px 7px;border-radius:4px;letter-spacing:.4px;text-decoration:none;cursor:default}
+.bv{background:rgba(0,212,170,.12);color:var(--foam);border:1px solid rgba(0,212,170,.25)}
+.bl{background:rgba(33,150,196,.12);color:var(--water-lt);border:1px solid rgba(33,150,196,.25);cursor:pointer;transition:background .2s}
+.bl:hover{background:rgba(33,150,196,.22)}
+.bw{background:rgba(46,125,50,.15);color:var(--worms-lt);border:1px solid rgba(46,125,50,.3)}
+.btn-sm{background:none;border:1px solid var(--border);color:var(--txt2);border-radius:var(--rs);padding:3px 9px;font-size:10.5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-sm:hover{border-color:var(--water);color:var(--water-lt)}
+
+/* LAYOUT */
+.app{position:relative;z-index:1;display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:330px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.stab{flex:1;padding:8px 2px;text-align:center;font-size:10px;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;border-bottom:2px solid transparent;transition:all .2s}
+.stab.active{color:var(--foam);border-bottom-color:var(--foam)}
+.stab:hover:not(.active){color:var(--txt2)}
+.scont{flex:1;overflow-y:auto;padding:13px;scrollbar-width:thin;scrollbar-color:var(--light) transparent}
+.scont::-webkit-scrollbar{width:3px}
+.scont::-webkit-scrollbar-thumb{background:var(--light);border-radius:2px}
+.tpanel{display:none}.tpanel.active{display:block}
+
+/* FORM */
+.sec{margin-bottom:16px}
+.sec-t{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.sec-t::after{content:'';flex:1;height:1px;background:var(--border)}
+.fld{margin-bottom:9px}
+.fld label{display:block;font-size:10.5px;color:var(--txt2);margin-bottom:4px;font-weight:500}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--inp);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);font-size:11.5px;padding:6px 9px;font-family:'DM Sans',sans-serif;transition:border-color .2s;outline:none}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--water)}
+.fld select option{background:var(--mid)}
+.fld input.italic-placeholder::placeholder{font-style:italic}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.hint{font-size:9.5px;color:var(--muted);margin-top:3px;font-style:italic}
+.rng{display:flex;align-items:center;gap:7px}
+.rng input[type=range]{flex:1;padding:0;height:4px;accent-color:var(--foam);cursor:pointer}
+.rval{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--foam);min-width:40px;text-align:right}
+
+/* italic species name */
+.species-italic{font-style:italic !important}
+
+/* WORMS */
+.wsbox{position:relative}
+.winput-row{display:flex;gap:6px;align-items:center}
+.winput-row input{flex:1;font-style:italic}
+.winput-row input::placeholder{font-style:italic}
+.btn-w{padding:6px 10px;background:rgba(46,125,50,.18);border:1px solid rgba(46,125,50,.38);border-radius:var(--rs);color:var(--worms-lt);font-size:10.5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-w:hover{background:rgba(46,125,50,.3)}
+.btn-w:disabled{opacity:.5;cursor:not-allowed}
+.btn-w.loading::after{content:'';width:9px;height:9px;border:1.5px solid var(--worms-lt);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wdrop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--mid);border:1px solid rgba(46,125,50,.4);border-radius:var(--r);max-height:190px;overflow-y:auto;z-index:200;display:none;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.wdrop.vis{display:block}
+.witem{padding:7px 11px;cursor:pointer;border-bottom:1px solid rgba(42,100,148,.2);transition:background .15s}
+.witem:last-child{border-bottom:none}
+.witem:hover{background:rgba(46,125,50,.14)}
+.wname{font-size:11.5px;font-style:italic;color:var(--txt)}
+.wsub{font-size:9.5px;color:var(--muted);margin-top:1px}
+.wid{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--worms-lt)}
+.wst{margin-top:6px;padding:6px 9px;border-radius:var(--rs);font-size:10.5px;display:none}
+.wst.vis{display:block}
+.wst.found{background:rgba(46,125,50,.14);border:1px solid rgba(46,125,50,.3);color:var(--worms-lt)}
+.wst.nf{background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.3);color:var(--gold)}
+.wst.err{background:rgba(255,107,74,.1);border:1px solid rgba(255,107,74,.3);color:var(--coral)}
+
+/* TRAITS GRID */
+.traits-wrap{margin-top:9px;display:none}
+.traits-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.traits-hdr span{font-size:9.5px;color:var(--worms-lt);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+.wlink{font-size:9.5px;color:var(--worms-lt);text-decoration:none}
+.wlink:hover{text-decoration:underline}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tc{border-radius:var(--rs);padding:5px 7px;border:1px solid var(--border);background:var(--inp)}
+.tc.filled{border-color:rgba(46,125,50,.4);background:rgba(46,125,50,.1)}
+.tc label{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px}
+.tc input{background:transparent;border:none;padding:0;font-size:11px;color:var(--txt);width:100%;outline:none}
+.tc.filled input{color:var(--worms-lt)}
+.tc input::placeholder{color:var(--muted);font-style:italic}
+.traits-note{font-size:9.5px;color:var(--muted);margin-top:5px;font-style:italic;line-height:1.5}
+
+/* SITES */
+.stbl{width:100%;border-collapse:collapse;font-size:10.5px}
+.stbl th{text-align:left;color:var(--muted);font-weight:500;padding:3px 5px;border-bottom:1px solid var(--border);font-size:9.5px}
+.stbl td{padding:5px 5px;border-bottom:1px solid rgba(42,100,148,.14)}
+.stbl tr:hover td{background:rgba(33,150,196,.05)}
+.sdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.scode{font-family:'DM Mono',monospace;font-weight:500}
+.stbl input[type=number]{width:64px;background:var(--inp);border:1px solid var(--border);border-radius:4px;color:var(--txt);font-size:10px;padding:2px 4px;font-family:'DM Mono',monospace}
+.stbl input[type=checkbox]{accent-color:var(--foam);cursor:pointer}
+.stbl input[type=text]{width:64px;background:var(--inp);border:1px solid var(--border);border-radius:4px;color:var(--txt);font-size:10px;padding:2px 4px}
+.example-note{font-size:9.5px;color:var(--gold);background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.25);border-radius:var(--rs);padding:5px 8px;margin-bottom:9px;line-height:1.5}
+
+/* REPLICATES */
+.rep-builder{border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:10px;background:var(--card)}
+.rep-builder-title{font-size:10px;font-weight:600;color:var(--txt2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px}
+.rep-unit-row{display:flex;gap:6px;margin-bottom:7px;flex-wrap:wrap}
+.rep-unit-btn{padding:4px 9px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--muted);font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.rep-unit-btn.active{border-color:var(--water);color:var(--water-lt);background:rgba(33,150,196,.12)}
+.rep-list{display:flex;flex-direction:column;gap:5px}
+.rep-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--rs);border:1px solid var(--border);background:var(--inp)}
+.rep-row.active-rep{border-color:var(--water);background:rgba(33,150,196,.1)}
+.rep-row input[type=checkbox]{accent-color:var(--foam);cursor:pointer}
+.rep-color{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rep-row input[type=text]{background:transparent;border:none;font-size:10.5px;color:var(--txt);padding:0;flex:1;min-width:40px;outline:none}
+.rep-row input[type=date]{background:transparent;border:none;font-size:10px;color:var(--txt2);padding:0;font-family:'DM Mono',monospace;outline:none;width:96px}
+.rep-row .rep-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px;transition:color .2s;flex-shrink:0}
+.rep-row .rep-del:hover{color:var(--coral)}
+.btn-add-rep{width:100%;margin-top:6px;padding:6px;border:1px dashed var(--border);border-radius:var(--rs);background:none;color:var(--muted);font-size:10.5px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-add-rep:hover{border-color:var(--water);color:var(--water-lt)}
+
+/* PATH/BROWSE */
+.pinp{display:flex;gap:5px}
+.pinp input{flex:1;font-family:'DM Mono',monospace;font-size:10px}
+.btn-br{padding:5px 9px;background:rgba(33,150,196,.14);border:1px solid rgba(33,150,196,.28);border-radius:var(--rs);color:var(--water-lt);font-size:10.5px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-br:hover{background:rgba(33,150,196,.24)}
+
+/* RUN */
+.sfooter{padding:11px 13px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-run{width:100%;padding:10px;background:linear-gradient(135deg,var(--foam-dk),var(--water));border:none;border-radius:var(--r);color:#fff;font-size:12.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .25s}
+.btn-run:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,170,.22)}
+.btn-run:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-run.running{background:linear-gradient(135deg,#0d6e6e,#1a5a8a)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.maparea{flex:1;position:relative;background:var(--mid);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mpholder{display:flex;flex-direction:column;align-items:center;gap:13px;color:var(--muted);text-align:center;padding:20px}
+.mpholder p{font-size:12.5px;max-width:280px;line-height:1.6}
+.mpholder .hint{font-size:10px;font-family:'DM Mono',monospace;opacity:.6}
+#result-img{display:none;width:100%;height:100%;object-fit:contain;padding:10px}
+.map-ctrl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px}
+.mbtn{width:29px;height:29px;background:var(--panel);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px)}
+.mbtn:hover{border-color:var(--water);color:var(--water-lt)}
+
+/* FILE MANAGER */
+.file-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(10,22,40,.97);border-top:1px solid var(--border);padding:8px 12px;display:none;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto}
+.file-panel.vis{display:flex}
+.file-panel-hdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.file-panel-hdr span{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.file-panel-hdr button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+.file-list{display:flex;flex-wrap:wrap;gap:6px}
+.fitem{display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rs);background:var(--inp);font-size:10px}
+.fitem-name{color:var(--txt2);font-family:'DM Mono',monospace;font-size:9.5px}
+.fitem-btns{display:flex;gap:3px}
+.fitem-btn{padding:2px 6px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:9px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.fitem-btn:hover{border-color:var(--water);color:var(--water-lt)}
+.fitem-btn.dl{border-color:rgba(0,212,170,.3);color:var(--foam)}
+
+.ftabs{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:none;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:4px}
+.ftabs.vis{display:flex}
+.ftab{padding:3px 10px;border-radius:16px;font-size:9.5px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .2s}
+.ftab.active{background:var(--water);color:#fff}
+
+/* STATUS */
+.sbar{height:33px;background:rgba(10,22,40,.97);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 13px;gap:16px;flex-shrink:0;font-size:10px}
+.si{display:flex;align-items:center;gap:5px;color:var(--muted)}
+.sdotst{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.sdotst.ready{background:var(--foam);box-shadow:0 0 5px var(--foam)}
+.sdotst.running{background:var(--gold);box-shadow:0 0 5px var(--gold);animation:pulse 1.2s infinite}
+.sdotst.error{background:var(--coral)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.sv{font-family:'DM Mono',monospace;color:var(--txt2);font-size:10px}
+.ss{flex:1}
+
+/* RESULTS */
+.rpanel{width:245px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rhdr{padding:10px 13px 8px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+.rcont{flex:1;overflow-y:auto;padding:9px;scrollbar-width:thin}
+.rcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:9px;margin-bottom:6px;animation:fadeIn .4s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.rsite{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.rsname{font-size:11px;font-weight:600}
+.rscode{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}
+.rmets{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.mtr{text-align:center}
+.mval{font-family:'DM Mono',monospace;font-size:12.5px;font-weight:500;color:var(--water-lt);display:block}
+.mlbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.rbar{margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.rbarfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--water),var(--foam));transition:width .8s ease}
+.empt{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:9px;color:var(--muted);text-align:center;padding:18px}
+.empt p{font-size:10.5px;line-height:1.6}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(10,22,40,.88);backdrop-filter:blur(6px);z-index:300;display:none;align-items:center;justify-content:center}
+.overlay.vis{display:flex}
+.modal{background:var(--mid);border:1px solid var(--border);border-radius:16px;padding:26px;width:420px;text-align:center}
+.modal-t{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-bottom:6px}
+.modal-s{font-size:11px;color:var(--txt2);margin-bottom:18px}
+.ptrack{height:5px;background:var(--light);border-radius:3px;overflow:hidden;margin-bottom:13px}
+.pfill{height:100%;background:linear-gradient(90deg,var(--water),var(--foam));border-radius:3px;transition:width .4s ease;width:0%}
+.psteps{display:flex;flex-direction:column;gap:7px;text-align:left;margin-bottom:16px}
+.pstep{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.pstep.done{color:var(--foam)}.pstep.active{color:var(--txt)}
+.sicon{width:17px;height:17px;border-radius:50%;background:var(--light);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.sicon.done{background:var(--foam);color:#fff}
+.sicon.active{background:var(--water);color:#fff;animation:pulse 1s infinite}
+.btn-cancel{background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--txt2);padding:7px 16px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-cancel:hover{border-color:var(--coral);color:var(--coral)}
+
+.hmodal{background:var(--mid);border:1px solid var(--border);border-radius:16px;padding:24px;width:480px;max-height:80vh;overflow-y:auto}
+.hmodal h2{font-family:'Fraunces',serif;font-size:18px;margin-bottom:16px;color:var(--foam)}
+.hsec{margin-bottom:14px}
+.hsec h3{font-size:10.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--water-lt);margin-bottom:6px}
+.hsec p,.hsec li{font-size:11px;color:var(--txt2);line-height:1.7}
+.hsec ul{padding-left:13px}
+.hsec code{font-family:'DM Mono',monospace;font-size:10px;background:var(--inp);padding:1px 4px;border-radius:3px;color:var(--foam)}
+.mclose{margin-top:16px;background:rgba(33,150,196,.14);border:1px solid rgba(33,150,196,.28);border-radius:var(--rs);color:var(--water-lt);padding:7px 16px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.mclose:hover{background:rgba(33,150,196,.24)}
+
+/* NOTIFICATION */
+.notif{position:fixed;bottom:42px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--mid);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:11px;opacity:0;transition:all .3s;z-index:400;white-space:nowrap}
+.notif.vis{opacity:1;transform:translateX(-50%) translateY(0)}
+.notif.ok{border-color:rgba(0,212,170,.4)}
+.notif.err{border-color:rgba(255,107,74,.4)}
+.notif.inf{border-color:rgba(46,125,50,.4)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img class="logo-img" src="logo.png"
+         style="width:38px;height:38px;object-fit:contain;border-radius:0;background:transparent"
+         onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'" alt="CyberTechSea">
+    <div id="logo-fallback" style="display:none;width:34px;height:34px;background:linear-gradient(135deg,var(--water),var(--foam));border-radius:50%;align-items:center;justify-content:center;font-size:16px">🌊</div>
+    <div class="logo-text">Marine Larval <span>Dispersal</span></div>
+  </div>
+  <div class="hdr-meta">
+    <span class="badge bv">v2.0</span>
+    <span class="badge bw">WoRMS API</span>
+    <a class="badge bl" href="https://github.com/CyberTechSea/marine-larval-dispersal" target="_blank">GitHub</a>
+    <a class="badge bl" href="https://doi.org/10.5281/zenodo.19955061" target="_blank">DOI</a>
+    <button class="btn-sm" onclick="toggleFilePanel()">📁 Files</button>
+    <button class="btn-sm" onclick="showHelp()">? Help</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="stabs">
+      <button class="stab active" onclick="switchTab('species',this)">Species</button>
+      <button class="stab" onclick="switchTab('sites',this)">Sites</button>
+      <button class="stab" onclick="switchTab('replicates',this)">Replicates</button>
+      <button class="stab" onclick="switchTab('data',this)">Data</button>
+    </div>
+
+    <div class="scont">
+
+      <!-- ══ SPECIES ══ -->
+      <div class="tpanel active" id="tab-species">
+
+        <div class="sec">
+          <div class="sec-t">🔬 Species Search &amp; Traits</div>
+          <div style="margin-bottom:9px">
+            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.8px;font-weight:600">Databases to query</div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--inp);cursor:pointer;font-size:10.5px">
+                <input type="checkbox" id="db-worms" checked style="accent-color:var(--worms-lt);width:13px;height:13px">
+                <span style="width:16px;height:16px;border-radius:3px;background:rgba(46,125,50,.2);color:var(--worms-lt);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">W</span>
+                <span style="flex:1"><strong style="color:var(--txt)">WoRMS</strong> <span style="color:var(--muted);font-size:9px">World Register of Marine Species</span></span>
+                <span id="st-db-worms" style="font-size:8.5px;font-family:monospace;color:var(--muted)"></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--inp);cursor:pointer;font-size:10.5px">
+                <input type="checkbox" id="db-slb" checked style="accent-color:var(--water-lt);width:13px;height:13px">
+                <span style="width:16px;height:16px;border-radius:3px;background:rgba(33,150,196,.15);color:var(--water-lt);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">S</span>
+                <span style="flex:1"><strong style="color:var(--txt)">SeaLifeBase</strong> <span style="color:var(--muted);font-size:9px">Marine invertebrates &amp; larval data</span></span>
+                <span id="st-db-slb" style="font-size:8.5px;font-family:monospace;color:var(--muted)"></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--inp);cursor:pointer;font-size:10.5px">
+                <input type="checkbox" id="db-gbif" checked style="accent-color:var(--gold);width:13px;height:13px">
+                <span style="width:16px;height:16px;border-radius:3px;background:rgba(240,180,41,.12);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">G</span>
+                <span style="flex:1"><strong style="color:var(--txt)">GBIF</strong> <span style="color:var(--muted);font-size:9px">Global Biodiversity Information Facility</span></span>
+                <span id="st-db-gbif" style="font-size:8.5px;font-family:monospace;color:var(--muted)"></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--inp);cursor:pointer;font-size:10.5px">
+                <input type="checkbox" id="db-obis" style="accent-color:var(--foam);width:13px;height:13px">
+                <span style="width:16px;height:16px;border-radius:3px;background:rgba(0,212,170,.1);color:var(--foam);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0">O</span>
+                <span style="flex:1"><strong style="color:var(--txt)">OBIS</strong> <span style="color:var(--muted);font-size:9px">Ocean Biodiversity Information System</span></span>
+                <span id="st-db-obis" style="font-size:8.5px;font-family:monospace;color:var(--muted)"></span>
+              </label>
+            </div>
+            <div class="hint" style="margin-top:4px">All checked databases are queried. Each trait field is filled from the first source that has it.</div>
+          </div>
+          <div class="wsbox">
+            <div class="winput-row">
+              <input type="text" id="wq"
+                placeholder="e.g. Electra posidoniae"
+                oninput="wDebounce()"
+                onkeydown="wKey(event)"
+                autocomplete="off">
+              <button class="btn-w" id="btn-ws" onclick="doSearch()">
+                <span id="ws-lbl">Search</span>
+              </button>
+            </div>
+            <div class="wdrop" id="wdrop"></div>
+            <div class="wst" id="wst"></div>
+          </div>
+
+          <div class="traits-wrap" id="traits-wrap">
+            <div class="traits-hdr">
+              <span>Traits from WoRMS</span>
+              <a class="wlink" id="wlink" href="#" target="_blank">View on WoRMS ↗</a>
+            </div>
+            <div class="tgrid" id="tgrid"></div>
+            <p class="traits-note">Fields auto-populated when available. Edit freely — your values take priority.</p>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-t">Species Parameters</div>
+          <div class="fld">
+            <label>Scientific name (labels &amp; figures)</label>
+            <input type="text" id="sname" class="species-italic" value="Electra posidoniae"
+                   placeholder="e.g. Electra posidoniae">
+          </div>
+          <div class="fld">
+            <label>Larval stage / type</label>
+            <input type="text" id="lstage" value="Cyphonautes"
+                   placeholder="e.g. Cyphonautes, Trochophore, Nauplius">
+          </div>
+          <div class="fld">
+            <label>Development type</label>
+            <select id="devtype">
+              <option value="planktotrophic">Planktotrophic (feeding larvae)</option>
+              <option value="lecithotrophic">Lecithotrophic (yolk-fed larvae)</option>
+              <option value="direct">Direct development (no larva)</option>
+              <option value="unknown">Unknown / not specified</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Taxonomic group</label>
+            <input type="text" id="txgroup" value="Bryozoa"
+                   placeholder="e.g. Bivalvia, Echinodermata, Teleostei">
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-t">Simulation Parameters</div>
+          <div class="fld">
+            <label>Pelagic Larval Duration — PLD</label>
+            <div class="frow">
+              <div class="fld" style="margin:0">
+                <label style="font-size:9px">Value</label>
+                <div class="rng">
+                  <input type="range" id="pld" min="1" max="365" value="60"
+                         oninput="document.getElementById('pldv').textContent=this.value;updateSummary()">
+                  <span class="rval" id="pldv">60</span>
+                </div>
+              </div>
+              <div class="fld" style="margin:0">
+                <label style="font-size:9px">Unit</label>
+                <select id="pld-unit" onchange="updateSummary()">
+                  <option value="hours">Hours</option>
+                  <option value="days" selected>Days</option>
+                  <option value="weeks">Weeks</option>
+                  <option value="months">Months</option>
+                </select>
+              </div>
+            </div>
+            <div class="hint" id="pld-hint">Temkin &amp; Zimmer 2002: 60 days for E. posidoniae</div>
+          </div>
+          <div class="fld">
+            <label>Particles per site per replicate</label>
+            <div class="rng">
+              <input type="range" id="npart" min="50" max="1000" step="50" value="300"
+                     oninput="document.getElementById('npartv').textContent=this.value;updateSummary()">
+              <span class="rval" id="npartv">300</span>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="fld">
+              <label>Release depth (m)</label>
+              <input type="number" id="depth" value="5" min="0" max="500" step="1">
+            </div>
+            <div class="fld">
+              <label>Connectivity (km)</label>
+              <input type="number" id="setkm" value="50" min="1" max="1000" step="5">
+            </div>
+          </div>
+          <div class="fld">
+            <label>Simulation year</label>
+            <select id="simyr">
+              <option value="1993" selected>1993</option>
+              <option>1994</option><option>1995</option><option>1996</option>
+              <option>1997</option><option>1998</option><option>1999</option>
+              <option>2000</option><option>2001</option><option>2002</option>
+            </select>
+          </div>
+        </div>
+      </div><!-- /species -->
+
+      <!-- ══ SITES ══ -->
+      <div class="tpanel" id="tab-sites">
+        <div class="sec">
+          <div class="sec-t">Release Sites</div>
+          <div class="example-note" id="site-note">
+            ⚑ Example site shown. Add your own sites below — the example will be replaced automatically.
+          </div>
+          <table class="stbl">
+            <thead><tr><th></th><th>Code</th><th>Name</th><th>Lon °E</th><th>Lat °N</th><th></th></tr></thead>
+            <tbody id="stbody"></tbody>
+          </table>
+        </div>
+        <div class="sec">
+          <div class="sec-t">Search locality</div>
+          <div class="hint" style="margin-bottom:7px">Type a name to get coordinates, or click the map in the main panel.</div>
+          <div style="display:flex;gap:5px;align-items:center">
+            <input type="text" id="geo-query" placeholder="e.g. Napoli, Taranto..." style="flex:1;font-size:11.5px" onkeydown="if(event.key===&quot;Enter&quot;)geoSearch()" oninput="onGeoInput()">
+            <button class="btn-br" onclick="geoSearch()" id="btn-geo">Search</button>
+          </div>
+          <div id="geo-drop" style="display:none;margin-top:3px;background:var(--inp);border:1px solid var(--border);border-radius:var(--rs);max-height:120px;overflow-y:auto"></div>
+          <div id="geo-status" style="font-size:9.5px;color:var(--muted);margin-top:3px;min-height:14px"></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-t">Add Site</div>
+          <div class="frow">
+            <div class="fld"><label>Code (2–4 chars)</label><input type="text" id="nc" maxlength="4" placeholder="XX"></div>
+            <div class="fld"><label>Name</label><input type="text" id="nn" placeholder="Locality"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Longitude °E</label><input type="number" id="nlon" step="0.01" placeholder="14.20"></div>
+            <div class="fld"><label>Latitude °N</label><input type="number" id="nlat" step="0.01" placeholder="40.80"></div>
+          </div>
+          <button class="btn-br" style="width:100%;margin-top:4px" onclick="addSite()">+ Add site</button>
+        </div>
+        <div class="sec">
+          <div class="sec-t">Presets</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn-sm" onclick="loadPreset('med')">Mediterranean (6 sites)</button>
+            <button class="btn-sm" onclick="loadPreset('adriatic')">Adriatic (4 sites)</button>
+            <button class="btn-sm" onclick="clearSites()">Clear all</button>
+          </div>
+        </div>
+      </div><!-- /sites -->
+
+      <!-- ══ REPLICATES ══ -->
+      <div class="tpanel" id="tab-replicates">
+        <div class="sec">
+          <div class="sec-t">Temporal Unit</div>
+          <div class="rep-unit-row" id="unit-row">
+            <button class="rep-unit-btn" onclick="setRepUnit('hours',this)">Hours</button>
+            <button class="rep-unit-btn" onclick="setRepUnit('days',this)">Days</button>
+            <button class="rep-unit-btn active" onclick="setRepUnit('weeks',this)">Weeks</button>
+            <button class="rep-unit-btn" onclick="setRepUnit('months',this)">Months</button>
+            <button class="rep-unit-btn" onclick="setRepUnit('seasons',this)">Seasons</button>
+            <button class="rep-unit-btn" onclick="setRepUnit('years',this)">Years</button>
+          </div>
+          <div class="hint">Choose the temporal resolution for your replicates. Each replicate defines one simulation run.</div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">Replicates</div>
+          <div class="rep-list" id="rep-list"></div>
+          <button class="btn-add-rep" onclick="addRep()">+ Add replicate</button>
+        </div>
+        <div class="sec">
+          <div class="sec-t">Presets</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn-sm" onclick="loadRepPreset('monthly')">Monthly Jan–Jun</button>
+            <button class="btn-sm" onclick="loadRepPreset('seasons')">4 Seasons</button>
+            <button class="btn-sm" onclick="loadRepPreset('weekly')">4 Weeks</button>
+            <button class="btn-sm" onclick="loadRepPreset('annual')">Annual (5 years)</button>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">Summary</div>
+          <div style="font-size:11px;color:var(--txt2);line-height:2">
+            <div>Sites: <span class="rval" id="sum-s">1</span> &nbsp; Replicates: <span class="rval" id="sum-r">6</span></div>
+            <div>Particles/site/rep: <span class="rval" id="sum-p">300</span></div>
+            <div>Total: <span class="rval" id="sum-t">1,800</span></div>
+            <div style="margin-top:3px;font-size:9.5px;color:var(--muted)">Est. runtime: <span id="sum-rt">~8 min (M2 Pro)</span></div>
+          </div>
+        </div>
+      </div><!-- /replicates -->
+
+      <!-- ══ DATA ══ -->
+      <div class="tpanel" id="tab-data">
+
+        <!-- ── STEP 1: CMEMS ACCOUNT ── -->
+        <div class="sec">
+          <div class="sec-t">① CMEMS Account</div>
+          <div style="background:rgba(33,150,196,.08);border:1px solid rgba(33,150,196,.25);border-radius:var(--r);padding:10px 12px;margin-bottom:8px">
+            <div style="font-size:11px;color:var(--txt2);line-height:1.7">
+              The forcing data (ocean current fields) is provided by the
+              <strong style="color:var(--water-lt)">Copernicus Marine Service (CMEMS)</strong>
+              — free for scientific use, registration required.
+            </div>
+            <button class="btn-br" style="margin-top:8px;width:100%"
+                    onclick="window.open('https://marine.copernicus.eu/services/user-learning-services/online-learning-register','_blank')">
+              🌐 Register free account at marine.copernicus.eu →
+            </button>
+            <div style="margin-top:6px;font-size:10px;color:var(--muted)">
+              Already registered? Proceed to Step 2.
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: DOWNLOAD DATA ── -->
+        <div class="sec">
+          <div class="sec-t">② Download Ocean Current Data</div>
+
+          <div style="font-size:10.5px;color:var(--txt2);line-height:1.7;margin-bottom:10px">
+            The simulation requires daily current fields (u, v) from CMEMS.
+            Configure the parameters below — the download command is generated automatically.
+          </div>
+
+          <!-- Dataset info -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;margin-bottom:10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--txt2);line-height:1.8">
+            <div><span style="color:var(--muted)">Product: </span>MEDSEA_MULTIYEAR_PHY_006_004</div>
+            <div><span style="color:var(--muted)">Dataset: </span>cmems_mod_med_phy-cur_my_4.2km_P1D-m</div>
+            <div><span style="color:var(--muted)">Variables:</span> uo (u-velocity), vo (v-velocity)</div>
+            <div><span style="color:var(--muted)">Resolution:</span> ~4.2 km · Daily mean · 0–43 m depth</div>
+            <div><span style="color:var(--muted)">DOI:</span>
+              <a href="https://doi.org/10.48670/mds-00375" target="_blank"
+                 style="color:var(--water-lt);text-decoration:none">10.48670/mds-00375 ↗</a>
+            </div>
+          </div>
+
+          <!-- Download parameters -->
+          <div class="frow">
+            <div class="fld">
+              <label>Start year</label>
+              <select id="dl-yr-start">
+                <option value="1993" selected>1993</option>
+                <option value="1994">1994</option><option value="1995">1995</option>
+                <option value="1996">1996</option><option value="1997">1997</option>
+                <option value="1998">1998</option><option value="1999">1999</option>
+                <option value="2000">2000</option><option value="2001">2001</option>
+                <option value="2002">2002</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>End year</label>
+              <select id="dl-yr-end">
+                <option value="1993">1993</option><option value="1994">1994</option>
+                <option value="1995">1995</option><option value="1996">1996</option>
+                <option value="1997">1997</option><option value="1998">1998</option>
+                <option value="1999">1999</option><option value="2000">2000</option>
+                <option value="2001">2001</option>
+                <option value="2002" selected>2002</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>Download folder</label>
+            <input type="file" id="dl-folder-file" webkitdirectory directory style="display:none" onchange="if(this.files[0]){const p=this.files[0].webkitRelativePath||' + "'" + "'" + ';const d=p.split(' + "'" + '/' + "'" + ')[0];if(d){document.getElementById(' + "'dl-folder'" + ').value=d;genCmd()}}">
+            <div style="display:flex;gap:5px">
+              <input type="text" id="dl-folder" placeholder="/path/to/data/"
+                     oninput="genCmd()" style="flex:1;font-family:'DM Mono',monospace;font-size:10.5px">
+              <button class="btn-br" onclick="document.getElementById('dl-folder-file').click()">Browse</button>
+            </div>
+            <div class="hint">Where to save the NetCDF file (~15–25 GB)</div>
+          </div>
+
+          <div class="fld">
+            <label>Output filename</label>
+            <input type="text" id="dl-fname" value="med_currents_1993_2002.nc"
+                   oninput="genCmd()" style="font-family:'DM Mono',monospace;font-size:10.5px">
+          </div>
+
+          <!-- Domain from sites -->
+          <div style="background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.2);border-radius:var(--rs);padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--txt2)">
+            <div style="color:var(--foam);font-weight:600;margin-bottom:4px">📍 Geographic domain</div>
+            <div id="domain-info" style="font-family:'DM Mono',monospace;line-height:1.8">
+              Lon: 3.0 – 22.0 °E &nbsp;|&nbsp; Lat: 35.0 – 47.0 °N<br>
+              <span style="color:var(--muted);font-size:9px">Mediterranean Sea (default). Add sites to refine automatically.</span>
+            </div>
+            <button class="btn-br" style="margin-top:6px;font-size:10px"
+                    onclick="updateDomainFromSites()">↻ Update from my sites</button>
+          </div>
+
+          <!-- Generated command -->
+          <div class="fld">
+            <label style="color:var(--foam)">Generated download command</label>
+            <div style="position:relative">
+              <textarea id="dl-cmd" rows="9" readonly
+                style="font-family:'DM Mono',monospace;font-size:9.5px;line-height:1.6;
+                       background:rgba(0,0,0,.4);border:1px solid rgba(0,212,170,.25);
+                       border-radius:var(--rs);color:var(--foam);padding:8px;
+                       width:100%;resize:none;cursor:text"></textarea>
+              <button onclick="copyCmd()" title="Copy command"
+                style="position:absolute;top:6px;right:6px;background:rgba(0,212,170,.15);
+                       border:1px solid rgba(0,212,170,.3);border-radius:4px;
+                       color:var(--foam);font-size:10px;padding:2px 8px;cursor:pointer">
+                Copy
+              </button>
+            </div>
+            <div class="hint">Run this command in Terminal (macOS/Linux) or Anaconda Prompt (Windows) after activating the conda environment.</div>
+          </div>
+
+          <!-- Step by step instructions -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:10px;color:var(--txt2);line-height:1.9;margin-top:4px">
+            <div style="font-weight:600;color:var(--water-lt);margin-bottom:5px">How to run the download:</div>
+            <div>1. Open <strong>Terminal</strong> (macOS/Linux) or <strong>Anaconda Prompt</strong> (Windows)</div>
+            <div>2. Type: <code style="font-family:'DM Mono',monospace;color:var(--foam);background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">conda activate sim_env</code></div>
+            <div>3. Type: <code style="font-family:'DM Mono',monospace;color:var(--foam);background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">copernicusmarine login</code> (first time only)</div>
+            <div>4. Paste and run the generated command above</div>
+            <div>5. Wait for download to complete (~15–25 GB, 30–90 min)</div>
+            <div>6. <strong style="color:var(--gold)">Important:</strong> after download, run:
+              <code style="font-family:'DM Mono',monospace;color:var(--gold);background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">pip install "numpy==1.26.4" "zarr==2.16.1" --force-reinstall</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: SET FILE PATH ── -->
+        <div class="sec">
+          <div class="sec-t">③ Set File Path</div>
+          <div class="fld">
+            <label>NetCDF file path</label>
+            <div style="display:flex;gap:5px">
+              <input type="text" id="ncpath"
+                     style="flex:1;font-family:'DM Mono',monospace;font-size:10.5px"
+                     placeholder="e.g. /Users/yourname/data/med_currents_1993_2002.nc"
+                     oninput="syncNcPath()">
+              <input type="file" id="ncpath-file" accept=".nc" style="display:none" onchange="if(this.files[0]){document.getElementById('ncpath').value=this.files[0].name;syncNcPath();notify('Browser shows filename only — verify full path.',' + "'inf'" + ')}">
+              <button class="btn-br" onclick="document.getElementById('ncpath-file').click()">Browse</button>
+              <button class="btn-br" onclick="autoFillPath()" title="Fill from download settings">Auto</button>
+            </div>
+            <div class="hint">Paste the full path to the downloaded .nc file. Click Auto to fill from Step ②.</div>
+          </div>
+
+          <button class="btn-br" style="width:100%;margin-bottom:6px" onclick="verifyFile()">
+            ✓ Verify file (check variables uo, vo)
+          </button>
+          <div id="verify-st" style="font-size:10px;color:var(--muted);min-height:14px"></div>
+        </div>
+
+        <!-- ── STEP 4: OUTPUT ── -->
+        <div class="sec">
+          <div class="sec-t">④ Output Directory</div>
+          <div class="fld">
+            <label>Where to save simulation results</label>
+            <input type="file" id="outpath-file" webkitdirectory directory style="display:none" onchange="if(this.files[0]){const p=this.files[0].webkitRelativePath||' + "'" + "'" + ';const d=p.split(' + "'" + '/' + "'" + ')[0];if(d)document.getElementById(' + "'outpath'" + ').value=d}">
+            <div style="display:flex;gap:5px">
+              <input type="text" id="outpath"
+                     style="flex:1;font-family:'DM Mono',monospace;font-size:10.5px"
+                     placeholder="e.g. /Users/yourname/results/">
+              <button class="btn-br" onclick="document.getElementById('outpath-file').click()">Browse</button>
+            </div>
+            <div class="hint">Trajectory files (Zarr), figures (PNG), and CSV statistics will be saved here.</div>
+          </div>
+        </div>
+
+        <!-- ── BACKEND SERVER ── -->
+        <div class="sec">
+          <div class="sec-t">⑤ Backend Server</div>
+          <div class="fld">
+            <label>Server address</label>
+            <input type="text" id="srv" value="http://localhost:8000">
+            <div class="hint">Start with: <code style="font-family:'DM Mono',monospace;color:var(--foam)">python backend/server.py</code></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:5px">
+            <button class="btn-br" style="flex:1" onclick="checkSrv()">Check connection</button>
+            <button class="btn-br" style="flex:1" onclick="window.open(srv()+'/docs','_blank')">API docs</button>
+          </div>
+          <div id="srv-st" style="margin-top:6px;font-size:10px;color:var(--muted)">Status: not checked</div>
+        </div>
+
+        <!-- ── LOAD EXISTING ── -->
+        <div class="sec">
+          <div class="sec-t">Load Existing Results</div>
+          <div class="fld">
+            <label>Results directory (contains traj_*.zarr files)</label>
+            <input type="text" id="zarr"
+                   style="font-family:'DM Mono',monospace;font-size:10.5px"
+                   placeholder="/path/to/results/">
+          </div>
+          <button class="btn-br" style="width:100%;margin-top:4px" onclick="loadRes()">
+            Load &amp; visualise existing results
+          </button>
+        </div>
+
+      </div><!-- /data -->
+
+    </div><!-- /scont -->
+
+    <div class="sfooter">
+      <button class="btn-run" id="btn-run" onclick="runSim()">
+        <span id="run-ico">▶</span><span id="run-lbl">Run Simulation</span>
+      </button>
+    </div>
+  </div><!-- /sidebar -->
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="maparea" id="maparea">
+      <div class="mpholder" id="mph">
+        <svg width="68" height="52" viewBox="0 0 80 60" opacity="0.32">
+          <ellipse cx="40" cy="30" rx="38" ry="27" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M14 25 Q24 15 34 22 Q44 29 54 20 Q64 12 69 25" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="20" cy="28" r="3" fill="currentColor"/>
+          <circle cx="44" cy="35" r="3" fill="currentColor"/>
+          <circle cx="57" cy="30" r="3" fill="currentColor"/>
+          <path d="M20 28 Q32 20 44 35 Q51 32 57 30" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3,2"/>
+        </svg>
+        <p>Search a species via <strong>WoRMS</strong>, configure sites and replicates, then click <strong>Run Simulation</strong>.</p>
+        <span class="hint">Or load existing results from the Data tab.</span>
+      </div>
+      <img id="result-img" alt="figure">
+
+      <div class="map-ctrl">
+        <button class="mbtn" title="Download figure" onclick="dlFig()">↓</button>
+        <button class="mbtn" title="Open full screen" onclick="openFig()">⤢</button>
+      </div>
+
+      <!-- FILE MANAGER PANEL -->
+      <div class="file-panel" id="file-panel">
+        <div class="file-panel-hdr">
+          <span>Output Files</span>
+          <button onclick="toggleFilePanel()">✕</button>
+        </div>
+        <div class="file-list" id="file-list">
+          <span style="font-size:10px;color:var(--muted)">No output files yet. Run a simulation first.</span>
+        </div>
+      </div>
+
+      <div class="ftabs" id="ftabs">
+        <button class="ftab active" onclick="swFig(this,'overview')">Overview</button>
+        <button class="ftab" onclick="swFig(this,'seasonal')">Seasonal</button>
+        <button class="ftab" onclick="swFig(this,'connectivity')">Connectivity</button>
+        <button class="ftab" onclick="swFig(this,'boxplot')">Dispersal</button>
+      </div>
+    </div>
+
+    <div class="sbar">
+      <div class="si"><div class="sdotst" id="sdot"></div><span id="stxt">Ready</span></div>
+      <div class="si">Species: <span class="sv" id="s-sp" style="font-style:italic">Electra posidoniae</span></div>
+      <div class="si">Particles: <span class="sv" id="s-pt">1,800</span></div>
+      <div class="si">Progress: <span class="sv" id="s-pr">—</span></div>
+      <div class="si">Elapsed: <span class="sv" id="s-el">—</span></div>
+      <div class="ss"></div>
+      <div class="si" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">OceanParcels 3.0.2 · CMEMS NEMO-OPA 4.2 km</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="rpanel">
+    <div class="rhdr">Results</div>
+    <div class="rcont" id="rcont">
+      <div class="empt"><span style="font-size:24px;opacity:.3">📊</span>
+        <p>Statistics appear here after simulation.</p></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- PROGRESS MODAL -->
+<div class="overlay" id="prog-modal">
+  <div class="modal">
+    <div class="modal-t">Running Simulation</div>
+    <div class="modal-s" id="msub">Initialising…</div>
+    <div class="ptrack"><div class="pfill" id="pfill"></div></div>
+    <div class="psteps">
+      <div class="pstep active" id="st0"><div class="sicon active">1</div><span>Validating grid cells — building FieldSet</span></div>
+      <div class="pstep" id="st1"><div class="sicon">2</div><span>Particle tracking — RK4 advection</span></div>
+      <div class="pstep" id="st2"><div class="sicon">3</div><span>Computing dispersal statistics</span></div>
+      <div class="pstep" id="st3"><div class="sicon">4</div><span>Generating Cartopy figures</span></div>
+    </div>
+    <button class="btn-cancel" onclick="cancelSim()">Cancel</button>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="overlay" id="help-modal" onclick="if(event.target===this)closeHelp()">
+  <div class="hmodal">
+    <h2>🌊 Marine Larval Dispersal — Help</h2>
+    <div class="hsec">
+      <h3>WoRMS Species Search</h3>
+      <ul>
+        <li>Type any scientific name — the interface queries <strong>WoRMS REST API</strong> in real time</li>
+        <li>The traits API (<code>marinespecies.org/traits/</code>) is queried for larval development data</li>
+        <li>Traits are pre-filled when available in WoRMS literature; edit freely when absent</li>
+        <li>PLD is rarely stored as a numeric value in WoRMS — enter it from your own data if needed</li>
+      </ul>
+    </div>
+    <div class="hsec">
+      <h3>Replicates — Temporal Design</h3>
+      <ul>
+        <li>Choose the temporal unit (hours, days, weeks, months, seasons, years)</li>
+        <li>Each replicate is one simulation run with a specific start date</li>
+        <li>Use presets for common designs (monthly Jan–Jun, 4 seasons, etc.)</li>
+        <li>For hourly simulations, ensure your CMEMS data has hourly resolution</li>
+      </ul>
+    </div>
+    <div class="hsec">
+      <h3>File Manager</h3>
+      <ul>
+        <li>Click 📁 (header or map panel) to open the file manager</li>
+        <li>Download figures as PNG, SVG, or PDF</li>
+        <li>Download CSV statistics for external analysis</li>
+        <li>All files are also saved to the output directory</li>
+      </ul>
+    </div>
+    <div class="hsec">
+      <h3>Quick Start</h3>
+      <ol style="padding-left:13px;font-size:11px;color:var(--txt2);line-height:1.8">
+        <li>Start backend: <code>conda activate sim_env &amp;&amp; python backend/server.py</code></li>
+        <li>Set CMEMS file path (Data tab or <code>export NC_FILE=…</code>)</li>
+        <li>Search species in WoRMS (Species tab)</li>
+        <li>Add release sites (Sites tab)</li>
+        <li>Configure replicates (Replicates tab)</li>
+        <li>Click <strong>Run Simulation</strong></li>
+      </ol>
+    </div>
+    <div class="hsec">
+      <h3>References</h3>
+      <ul>
+        <li>OceanParcels: <code>10.5194/gmd-12-3571-2019</code></li>
+        <li>CMEMS: <code>10.48670/mds-00375</code></li>
+        <li>Code: <code>10.5281/zenodo.19955061</code></li>
+        <li>WoRMS: <code>marinespecies.org</code></li>
+      </ul>
+    </div>
+    <div class="hsec">
+      <h3>Author &amp; Contact</h3>
+      <ul>
+        <li><strong>Francesco Paolo Patti</strong> — Zoological Station Anton Dohrn</li>
+        <li>Email: <a href="mailto:francesco.patti@szn.it" style="color:var(--water-lt)">francesco.patti@szn.it</a></li>
+        <li>GitHub: <a href="https://github.com/CyberTechSea" target="_blank" style="color:var(--water-lt)">github.com/CyberTechSea</a></li>
+        <li>ORCID: <a href="https://orcid.org/0000-0002-7975-2947" target="_blank" style="color:var(--water-lt)">0000-0002-7975-2947</a></li>
+      </ul>
+      <p style="margin-top:8px">
+        If you use this software in your research, please cite:<br>
+        <code style="font-size:9.5px;line-height:1.8">
+          Francesco Paolo Patti (2026). A Validated Python Pipeline for Coastal Lagrangian
+          Dispersal Modelling with OceanParcels 3.x and CMEMS.
+          Zenodo. https://doi.org/10.5281/zenodo.19955061
+        </code>
+      </p>
+    </div>
+    <div class="hsec">
+      <h3>License</h3>
+      <ul>
+        <li>This software is released under the <strong>MIT License</strong></li>
+        <li>Free to use, modify, and distribute with attribution</li>
+        <li>OceanParcels: MIT · CMEMS data: Copernicus Marine Service Licence</li>
+      </ul>
+    </div>
+    <button class="mclose" onclick="closeHelp()">Close</button>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const WORMS = 'https://www.marinespecies.org/rest';
+const TRAITS = 'https://www.marinespecies.org/traits/rest';
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let sites = [
+  {code:'EX', name:'Example Site', lon:14.20, lat:40.80, color:'#8e24aa', on:true, example:true}
+];
+let reps = [];
+let repUnit = 'weeks';
+let simRunning = false, simTimer = null, elSec = 0;
+let curFigs = {}, aphiaId = null, notifTmr;
+
+const COLORS = ['#e53935','#fb8c00','#8e24aa','#1e88e5','#26a69a','#43a047','#ab47bc','#ef5350','#26c6da','#d4e157'];
+const REP_COLORS = ['#1565c0','#0288d1','#00897b','#558b2f','#f9a825','#e53935','#7b1fa2','#00838f'];
+
+const MED_PRESET = [
+  {code:'GE',name:'Genova',      lon:8.900, lat:44.400,color:'#e53935'},
+  {code:'EB',name:'Elba/Livorno',lon:10.200,lat:43.500,color:'#fb8c00'},
+  {code:'NA',name:'Napoli',      lon:14.200,lat:40.800,color:'#8e24aa'},
+  {code:'TA',name:'Taranto',     lon:17.708,lat:39.979,color:'#1e88e5'},
+  {code:'PA',name:'Palermo',     lon:13.400,lat:38.100,color:'#26a69a'},
+  {code:'MS',name:'Messina',     lon:15.500,lat:38.200,color:'#43a047'},
+];
+const ADR_PRESET = [
+  {code:'VE',name:'Venice',   lon:12.340,lat:45.440,color:'#e53935'},
+  {code:'AN',name:'Ancona',   lon:13.510,lat:43.620,color:'#fb8c00'},
+  {code:'BA',name:'Bari',     lon:16.870,lat:41.120,color:'#8e24aa'},
+  {code:'TA',name:'Taranto',  lon:17.708,lat:39.979,color:'#1e88e5'},
+];
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(n,btn){
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+n).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(n==='sites') showSiteMap(); else hideSiteMap();
+}
+
+// Leaflet interactive map for Sites tab
+let leafletMap=null,leafletMarkers=[],siteMapVisible=false;
+function showSiteMap(){
+  if(siteMapVisible)return; siteMapVisible=true;
+  const ma=document.getElementById('maparea');
+  let ov=document.getElementById('site-map-overlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='site-map-overlay';
+    ov.style.cssText='position:absolute;inset:0;z-index:20;display:flex;flex-direction:column';
+    const bar=document.createElement('div');
+    bar.style.cssText='padding:6px 12px;background:rgba(10,22,40,.95);border-bottom:1px solid var(--border);font-size:10px;color:var(--txt2);flex-shrink:0';
+    bar.textContent='Click on the map to set coordinates. Search by name in the sidebar.';
+    ov.appendChild(bar);
+    const mc=document.createElement('div'); mc.id='leaflet-container';
+    mc.style.cssText='flex:1;width:100%'; ov.appendChild(mc); ma.appendChild(ov);
+  } else { ov.style.display='flex'; }
+  if(!window.L){
+    const css=document.createElement('link'); css.rel='stylesheet';
+    css.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css';
+    document.head.appendChild(css);
+    const js=document.createElement('script');
+    js.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
+    js.onload=()=>initLeaflet(); document.head.appendChild(js);
+  } else { setTimeout(initLeaflet,50); }
+}
+function hideSiteMap(){
+  siteMapVisible=false;
+  const ov=document.getElementById('site-map-overlay');
+  if(ov)ov.style.display='none';
+}
+function initLeaflet(){
+  if(leafletMap){leafletMap.invalidateSize();refreshLeafletMarkers();return;}
+  leafletMap=L.map('leaflet-container',{center:[41,13],zoom:5});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a> © CARTO',
+    subdomains:'abcd',maxZoom:19
+  }).addTo(leafletMap);
+  leafletMap.on('click',function(e){
+    const lon=parseFloat(e.latlng.lng.toFixed(3));
+    const lat=parseFloat(e.latlng.lat.toFixed(3));
+    document.getElementById('nlon').value=lon;
+    document.getElementById('nlat').value=lat;
+    fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json',
+      {headers:{'Accept-Language':'en'}})
+      .then(r=>r.json()).then(d=>{
+        const name=d.address&&(d.address.city||d.address.town||d.address.village||'');
+        if(name&&!document.getElementById('nn').value){
+          document.getElementById('nn').value=name;
+          if(!document.getElementById('nc').value)
+            document.getElementById('nc').value=name.substring(0,3).toUpperCase().replace(/[^A-Z]/g,'');
+        }
+      }).catch(()=>{});
+    L.popup().setLatLng(e.latlng)
+      .setContent('<b>'+lon+'°E  '+lat+'°N</b><br><small>Coordinates set in form</small>')
+      .openOn(leafletMap);
+    notify('Coordinates: '+lon+'°E, '+lat+'°N — fill Code and Name, then Add site','inf');
+  });
+  refreshLeafletMarkers();
+}
+function refreshLeafletMarkers(){
+  if(!leafletMap)return;
+  leafletMarkers.forEach(m=>m.remove()); leafletMarkers=[];
+  sites.filter(s=>s.on&&!s.example).forEach(s=>{
+    const icon=L.divIcon({
+      html:'<div style="width:11px;height:11px;border-radius:50%;background:'+s.color+';border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+      iconSize:[11,11],iconAnchor:[5,5],className:''
+    });
+    leafletMarkers.push(L.marker([s.lat,s.lon],{icon}).addTo(leafletMap)
+      .bindPopup('<b>'+s.code+'</b> — '+s.name+'<br><small>'+s.lon+'°E, '+s.lat+'°N</small>'));
+  });
+}
+
+// Geocoding search (Nominatim)
+let geoTimer;
+function onGeoInput(){
+  clearTimeout(geoTimer);
+  if(document.getElementById('geo-query').value.trim().length<2){
+    document.getElementById('geo-drop').style.display='none'; return;
+  }
+  geoTimer=setTimeout(geoSearch,600);
+}
+async function geoSearch(){
+  const q=document.getElementById('geo-query').value.trim();
+  if(!q){notify('Enter a locality name.','err');return;}
+  const btn=document.getElementById('btn-geo');
+  const drop=document.getElementById('geo-drop');
+  const status=document.getElementById('geo-status');
+  btn.textContent='...'; btn.disabled=true;
+  status.style.color='var(--muted)'; status.textContent='Searching...';
+  drop.style.display='none';
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=6',{headers:{'Accept-Language':'en'}});
+    const results=await r.json();
+    if(!results.length){status.textContent='No results found.';status.style.color='var(--gold)';}
+    else{
+      drop.innerHTML='';
+      results.forEach(res=>{
+        const lon=parseFloat(parseFloat(res.lon).toFixed(3));
+        const lat=parseFloat(parseFloat(res.lat).toFixed(3));
+        const shortName=res.display_name.split(',')[0].trim();
+        const name=res.display_name.split(',').slice(0,2).join(', ');
+        const item=document.createElement('div');
+        item.style.cssText='padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:10.5px';
+        item.innerHTML='<div style="color:var(--txt)">'+name+'</div>'
+          +'<div style="font-size:9px;font-family:monospace;color:var(--txt2);margin-top:1px">'+lon+'°E · '+lat+'°N</div>';
+        item.onmouseover=()=>item.style.background='rgba(33,150,196,.1)';
+        item.onmouseout=()=>item.style.background='';
+        item.onclick=()=>{
+          document.getElementById('nlon').value=lon;
+          document.getElementById('nlat').value=lat;
+          if(!document.getElementById('nn').value) document.getElementById('nn').value=shortName;
+          if(!document.getElementById('nc').value) document.getElementById('nc').value=shortName.substring(0,3).toUpperCase().replace(/[^A-Z]/g,'');
+          document.getElementById('geo-query').value=shortName;
+          drop.style.display='none';
+          status.textContent='Coordinates set: '+lon+'°E, '+lat+'°N';
+          status.style.color='var(--foam)';
+          if(leafletMap) leafletMap.setView([lat,lon],8);
+          notify(shortName+' — '+lon+'°E, '+lat+'°N','inf');
+        };
+        drop.appendChild(item);
+      });
+      drop.style.display='block';
+      status.textContent=results.length+' results';
+      status.style.color='var(--txt2)';
+    }
+  }catch(e){status.textContent='Search error.';status.style.color='var(--coral)';}
+  finally{btn.textContent='Search';btn.disabled=false;}
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#geo-query')&&!e.target.closest('#geo-drop')&&!e.target.closest('#btn-geo'))
+    document.getElementById('geo-drop').style.display='none';
+});
+
+// ═══════════════════════════════════════════════════════
+// WORMS SEARCH
+// ═══════════════════════════════════════════════════════
+let wTimer;
+function wDebounce(){clearTimeout(wTimer);const q=document.getElementById('wq').value.trim();if(q.length<3){hideDrop();return}wTimer=setTimeout(doSearch,600)}
+function wKey(e){if(e.key==='Enter'){clearTimeout(wTimer);doSearch()}if(e.key==='Escape')hideDrop()}
+
+async function doSearch(){
+  const q=document.getElementById('wq').value.trim();
+  if(!q)return;
+  const btn=document.getElementById('btn-ws');
+  const lbl=document.getElementById('ws-lbl');
+  btn.disabled=true;btn.classList.add('loading');lbl.textContent='';
+  hideDrop();setWSt('','');
+  try{
+    const url=`${WORMS}/AphiaRecordsByName/${encodeURIComponent(q)}?like=true&marine_only=true&offset=1`;
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(res.status===204){setWSt('No marine species found. Try a different spelling.','nf');return}
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data||!data.length){setWSt('No results. Try the genus name only.','nf');return}
+    showDrop(data.slice(0,12));
+  }catch(e){
+    if(e.message.includes('fetch'))setWSt('Cannot reach WoRMS API. Check internet connection.','err');
+    else setWSt('WoRMS error: '+e.message,'err');
+  }finally{btn.disabled=false;btn.classList.remove('loading');lbl.textContent='Search'}
+}
+
+function showDrop(res){
+  const dd=document.getElementById('wdrop');
+  dd.innerHTML='';
+  res.forEach(r=>{
+    const st=r.status==='accepted'?'':'<span style="color:var(--gold);font-size:8.5px"> ('+r.status+')</span>';
+    const d=document.createElement('div');d.className='witem';
+    d.innerHTML=`<div class="wname">${r.scientificname}${st}</div>
+      <div class="wsub">${[r.phylum,r.class,r.order,r.family].filter(Boolean).join(' › ')}</div>
+      <div class="wid">AphiaID: ${r.AphiaID}</div>`;
+    d.onclick=()=>selectSp(r);
+    dd.appendChild(d);
+  });
+  dd.classList.add('vis');
+}
+
+function hideDrop(){document.getElementById('wdrop').classList.remove('vis')}
+document.addEventListener('click',e=>{if(!e.target.closest('.wsbox'))hideDrop()});
+
+async function selectSp(rec){
+  hideDrop();aphiaId=rec.AphiaID;
+  let acc=rec;
+  if(rec.status!=='accepted'&&rec.valid_AphiaID){
+    try{const r=await fetch(`${WORMS}/AphiaRecordByAphiaID/${rec.valid_AphiaID}`);if(r.ok)acc=await r.json()}catch{}
+  }
+  document.getElementById('wq').value=acc.scientificname;
+  document.getElementById('sname').value=acc.scientificname;
+  document.getElementById('txgroup').value=acc.phylum||acc.kingdom||'';
+  document.getElementById('lstage').value='';
+  document.getElementById('devtype').value='unknown';
+  ['tc-dev','tc-ltype','tc-pmin','tc-pmax','tc-rep','tc-mob','tc-brd'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('s-sp').textContent=acc.scientificname;
+  document.getElementById('wlink').href=`https://www.marinespecies.org/aphia.php?p=taxdetails&id=${acc.AphiaID}`;
+  setWSt(`✓ ${acc.scientificname} · AphiaID ${acc.AphiaID} · ${acc.phylum||'unknown phylum'}  ·  ${acc.status}`,'found');
+  notify('Species selected. Fetching traits from WoRMS…','inf');
+  await fetchTraits(acc.AphiaID,acc.scientificname);
+}
+
+// MULTI-DATABASE TRAITS SYSTEM v1.0
+function getEnabledDbs(){
+  var dbs=[];
+  var w=document.getElementById('db-worms');
+  var s=document.getElementById('db-slb');
+  var g=document.getElementById('db-gbif');
+  var o=document.getElementById('db-obis');
+  if(!w) return ['worms','slb','gbif'];
+  if(w&&w.checked) dbs.push('worms');
+  if(s&&s.checked) dbs.push('slb');
+  if(g&&g.checked) dbs.push('gbif');
+  if(o&&o.checked) dbs.push('obis');
+  return dbs.length?dbs:['worms','slb','gbif'];
+}
+function setDbSt(db,state,msg){
+  var el=document.getElementById('st-db-'+db);
+  if(!el)return;
+  var colors={searching:'var(--gold)',found:'var(--foam)',empty:'var(--muted)',error:'var(--coral)'};
+  var icons={searching:'&#x27F3;',found:'&#x2713;',empty:'&mdash;',error:'&#x2717;'};
+  el.style.color=colors[state]||'var(--muted)';
+  el.innerHTML=(icons[state]||'')+' '+(msg||'');
+}
+function resetDbSt(){
+  ['worms','slb','gbif','obis'].forEach(function(db){
+    var el=document.getElementById('st-db-'+db);
+    if(el){el.innerHTML='';el.style.color='var(--muted)';}
+  });
+}
+function hasAnyTrait(f){
+  return Object.values(f).some(function(v){return v&&String(v).trim();});
+}
+function mergeField(f,result){
+  if(!result||!result.traits)return;
+  Object.keys(f).forEach(function(k){
+    if(f[k]===null&&result.traits[k])f[k]=result.traits[k];
+  });
+}
+function flattenWoRMS(arr){
+  var flat=[];
+  function recurse(items){
+    if(!Array.isArray(items))return;
+    items.forEach(function(t){flat.push(t);if(t.children&&t.children.length)recurse(t.children);});
+  }
+  recurse(arr);return flat;
+}
+
+async function fetchTraits(aphiaId,speciesName){
+  document.getElementById('traits-wrap').style.display='none';
+  resetDbSt();
+  var dbs=getEnabledDbs();
+  var f={dev:null,ltype:null,pldMin:null,pldMax:null,rep:null,mob:null,brooding:null};
+  var sources=[];
+  var links={};
+
+  if(dbs.includes('worms')){
+    setDbSt('worms','searching');
+    var wr=await fetchWoRMS(aphiaId,speciesName);
+    mergeField(f,wr);links.worms=wr.link;
+    var n=Object.values(wr.traits||{}).filter(Boolean).length;
+    if(wr.hasData){sources.push('WoRMS');setDbSt('worms','found',n+' traits');}
+    else setDbSt('worms','empty','no traits');
+  }
+  if(dbs.includes('slb')){
+    setDbSt('slb','searching');
+    var sr=await fetchSeaLifeBase(speciesName,aphiaId);
+    mergeField(f,sr);links.slb=sr.link;
+    if(sr.hasData){sources.push('SeaLifeBase');setDbSt('slb','found','found');}
+    else setDbSt('slb','empty',sr.note||'no data');
+  }
+  if(dbs.includes('gbif')){
+    setDbSt('gbif','searching');
+    var gr=await fetchGBIF(speciesName);
+    mergeField(f,gr);links.gbif=gr.link;
+    if(gr.hasData){sources.push('GBIF');setDbSt('gbif','found','found');}
+    else setDbSt('gbif','empty',gr.note||'taxonomy only');
+  }
+  if(dbs.includes('obis')){
+    setDbSt('obis','searching');
+    var or2=await fetchOBIS(speciesName);
+    links.obis=or2.link;
+    setDbSt('obis',or2.found?'found':'empty',or2.found?'verified':'not found');
+  }
+
+  var srcEl=document.getElementById('traits-src-lbl');
+  if(srcEl)srcEl.textContent=sources.length?'from: '+sources.join(' + '):'';
+  var wlEl=document.getElementById('wlink');
+  if(wlEl){
+    var lh=Object.entries(links).map(function(e){
+      var db=e[0],url=e[1];
+      var names={worms:'WoRMS',slb:'SeaLifeBase',gbif:'GBIF',obis:'OBIS'};
+      return url?'<a href="'+url+'" target="_blank" style="font-size:9px;color:var(--water-lt);margin-right:8px;text-decoration:none">'+names[db]+' \u2197</a>':'';
+    }).join('');
+    wlEl.innerHTML=lh;
+  }
+
+  applyTraits(f,sources.join('+'));
+  renderTraitChips(f);
+  if(sources.length)notify('Traits loaded from '+sources.join(' + ')+'. Edit as needed.','inf');
+  else{notify('No traits found. Enter parameters manually.','inf');suggestPLDHint();}
+  updateSummary();
+}
+
+async function fetchWoRMS(aphiaId,name){
+  var out={hasData:false,source:'WoRMS',traits:{},link:'https://www.marinespecies.org/aphia.php?p=taxdetails&id='+aphiaId};
+  var arr=[];
+  var eps=[
+    'https://www.marinespecies.org/rest/AphiaAttributesByAphiaID/'+aphiaId,
+    'https://www.marinespecies.org/rest/AphiaAttributesByAphiaID/'+aphiaId+'?include_inherited=true',
+    'https://www.marinespecies.org/traits/rest/AphiaAttributesByAphiaID/'+aphiaId,
+  ];
+  for(var i=0;i<eps.length;i++){
+    try{
+      var r=await fetch(eps[i],{headers:{'Accept':'application/json'}});
+      if(r.ok&&r.status!==204){var d=await r.json();if(Array.isArray(d))arr.push(...d);}
+    }catch(e){}
+  }
+  try{
+    var r2=await fetch('https://www.marinespecies.org/rest/AphiaRecordByAphiaID/'+aphiaId,{headers:{'Accept':'application/json'}});
+    if(r2.ok){
+      var rec=await r2.json();
+      var flds={Breeding:'larval_stage_text',LifeStyle:'development',FeedingType:'development'};
+      Object.entries(flds).forEach(function(e){if(rec[e[0]])arr.push({attributeName:e[1],attributeValue:String(rec[e[0]]).trim()});});
+      if(rec.LarvaType)arr.push({attributeName:'larval_type',attributeValue:rec.LarvaType});
+      if(rec.LarvaeType)arr.push({attributeName:'larval_type',attributeValue:rec.LarvaeType});
+    }
+  }catch(e){}
+  out.traits=parseRawTraits(arr);
+  out.hasData=hasAnyTrait(out.traits);
+  return out;
+}
+
+async function fetchSeaLifeBase(name,aphiaId){
+  var out={hasData:false,source:'SeaLifeBase',traits:{},note:'',link:'https://www.sealifebase.ca/'};
+  var parts=name.split(' ');
+  if(parts.length<2){out.note='needs genus+species';return out;}
+  try{
+    var r=await fetch('https://fishbase.ropensci.org/sealifebase/species?Genus='+encodeURIComponent(parts[0])+'&Species='+encodeURIComponent(parts[1])+'&limit=3',
+      {headers:{'Accept':'application/json'},signal:AbortSignal.timeout(8000)});
+    if(!r.ok){out.note='API unavailable ('+r.status+')';return out;}
+    var d=await r.json();
+    var rows=d.data||[];
+    if(!rows.length){out.note='not in SeaLifeBase';return out;}
+    var sp=rows[0];
+    out.link='https://www.sealifebase.ca/summary/'+(sp.Genus||parts[0])+'-'+(sp.Species||parts[1])+'.html';
+    var traits={};
+    if(sp.SpecCode){
+      try{
+        var lr=await fetch('https://fishbase.ropensci.org/sealifebase/larvae?SpecCode='+sp.SpecCode+'&limit=5',
+          {headers:{'Accept':'application/json'},signal:AbortSignal.timeout(6000)});
+        if(lr.ok){
+          var ld=await lr.json();var lrows=ld.data||[];
+          if(lrows.length){
+            var l0=lrows[0];
+            if(l0.LarvaeType||l0.Type)traits.ltype=l0.LarvaeType||l0.Type;
+            if(l0.LarvalDuration)traits.pldMin=String(l0.LarvalDuration);
+            if(l0.LarvalDurationMax)traits.pldMax=String(l0.LarvalDurationMax);
+            if(l0.DevelopmentMode)traits.dev=l0.DevelopmentMode;
+          }
+        }
+      }catch(e){}
+    }
+    out.traits=traits;out.hasData=hasAnyTrait(traits);out.note=out.hasData?'found':'no larval data';
+  }catch(e){out.note='timeout or CORS';}
+  return out;
+}
+
+async function fetchGBIF(name){
+  var out={hasData:false,source:'GBIF',traits:{},note:'',link:'https://www.gbif.org/'};
+  try{
+    var r=await fetch('https://api.gbif.org/v1/species/match?name='+encodeURIComponent(name)+'&kingdom=Animalia',{signal:AbortSignal.timeout(6000)});
+    if(!r.ok){out.note='unavailable';return out;}
+    var d=await r.json();
+    if(!d.usageKey){out.note='not matched';return out;}
+    out.link='https://www.gbif.org/species/'+d.usageKey;
+    var traits={};
+    try{
+      var r2=await fetch('https://api.gbif.org/v1/species/'+d.usageKey+'/descriptions?limit=30',{signal:AbortSignal.timeout(7000)});
+      if(r2.ok){
+        var desc=await r2.json();
+        (desc.results||[]).forEach(function(item){
+          var txt=item.description||item.body||'';
+          if(txt)extractFromText(txt,traits);
+        });
+      }
+    }catch(e){}
+    out.traits=traits;out.hasData=hasAnyTrait(traits);out.note=out.hasData?'traits found':'taxonomy only';
+  }catch(e){out.note='timeout';}
+  return out;
+}
+
+function extractFromText(txt,traits){
+  if(!txt||txt.length<3)return;
+  var tl=txt.toLowerCase();
+  var lsMatch=txt.match(/[Ll]arval\s+stage\s*:\s*(\w+)/);
+  if(lsMatch&&!traits.dev){
+    var v=lsMatch[1].toLowerCase();
+    if(/planktotroph/.test(v))traits.dev='planktotrophic';
+    else if(/lecitotroph/.test(v))traits.dev='lecithotrophic';
+    else if(/direct/.test(v))traits.dev='direct';
+    else traits.dev=lsMatch[1];
+  }
+  if(!traits.dev){
+    if(/planktotroph/.test(tl))traits.dev='planktotrophic';
+    else if(/lecitotroph/.test(tl))traits.dev='lecithotrophic';
+    else if(/direct.develop/.test(tl))traits.dev='direct';
+  }
+  var larvaTypes=[
+    ['echinopluteus','Echinopluteus'],['pluteus','Pluteus'],['cyphonaute','Cyphonautes'],
+    ['trochophore','Trochophore'],['nauplius','Nauplius'],['zoea','Zoea'],
+    ['veliger','Veliger'],['auricularia','Auricularia'],['bipinnaria','Bipinnaria'],
+    ['pilidium','Pilidium'],['tornaria','Tornaria'],['planula','Planula'],
+  ];
+  if(!traits.ltype)larvaTypes.forEach(function(pair){
+    if(!traits.ltype&&new RegExp(pair[0],'i').test(tl))traits.ltype=pair[1];
+  });
+  if(!traits.pldMin){
+    var dm=txt.match(/(?:about|approximately|for)?\s*(\d+)\s*(?:to\s*(\d+)\s*)?days?(?:\s*before\s*settl|\s*in\s*(?:the\s*)?(?:plankton|zooplankton)|\s*larval)/i);
+    var dm2=txt.match(/(?:larv|pelagic|plankton).{0,40}?(\d+)\s*(?:to\s*(\d+)\s*)?days?/i);
+    var wm=txt.match(/(?:larv|pelagic|plankton).{0,40}?(\d+)\s*(?:to\s*(\d+)\s*)?weeks?/i);
+    var best=dm||dm2;
+    if(best){traits.pldMin=best[1];if(best[2])traits.pldMax=best[2];}
+    else if(wm){traits.pldMin=String(parseInt(wm[1])*7);if(wm[2])traits.pldMax=String(parseInt(wm[2])*7);}
+  }
+  if(!traits.rep){
+    if(/broadcast.spawn/.test(tl))traits.rep='broadcast spawner';
+    else if(/asexual/.test(tl))traits.rep='asexual';
+    else if(/hermaphrod/.test(tl))traits.rep='hermaphroditic';
+    else if(/gonochor/.test(tl))traits.rep='gonochoric';
+    else if(/\bspawn/.test(tl))traits.rep='spawner';
+  }
+}
+
+async function fetchOBIS(name){
+  var out={found:false,link:'https://obis.org/'};
+  try{
+    var r=await fetch('https://api.obis.org/v3/taxon/match?scientificname='+encodeURIComponent(name),{signal:AbortSignal.timeout(6000)});
+    if(!r.ok)return out;
+    var d=await r.json();
+    var res=d.results||d;
+    if(res&&res.length&&res[0].taxonID){out.found=true;out.link='https://obis.org/taxon/'+res[0].taxonID;}
+  }catch(e){}
+  return out;
+}
+
+function parseRawTraits(arr){
+  var f={dev:null,ltype:null,pldMin:null,pldMax:null,rep:null,mob:null,brooding:null};
+  if(!Array.isArray(arr))return f;
+  var flat=flattenWoRMS(arr);
+  flat.forEach(function(t){
+    var k=(t.measurementType||t.attributeName||t.CategoryName||'').toLowerCase().trim();
+    var v=String(t.measurementValue||t.attributeValue||t.Value||'').trim();
+    if(!v||v==='null'||v==='undefined')return;
+    if(k==='development')f.dev=f.dev||v;
+    if(k==='mobility')f.mob=f.mob||v;
+    if(k==='brooding')f.brooding=f.brooding||v;
+    if(k==='larval type'||k==='larva type')f.ltype=f.ltype||v;
+    if(!f.dev&&/development/.test(k))f.dev=v;
+    if(!f.ltype&&/larval.type|larva.type|larval.stage|larval_type/.test(k))f.ltype=v;
+    if(/pld.min|duration.min/.test(k))f.pldMin=f.pldMin||v;
+    if(/pld.max|duration.max/.test(k))f.pldMax=f.pldMax||v;
+    if(/^pld$|pelagic.larval.duration$/.test(k))f.pldMin=f.pldMin||v;
+    if(!f.rep&&/reprod/.test(k))f.rep=v;
+    if(!f.mob&&/mobil|locomotion/.test(k))f.mob=v;
+    if(/larval_stage_text|breeding/.test(k)){
+      var vl=v.toLowerCase();
+      if(!f.ltype){var m=v.match(/(echinopluteus|pluteus|cyphonautes?|trochophore|nauplius|zoea|veliger|auricularia|bipinnaria|pilidium|tornaria|planula)/i);if(m)f.ltype=m[1];}
+      if(!f.dev){
+        if(/planktotroph/.test(vl))f.dev='planktotrophic';
+        else if(/lecitotroph/.test(vl))f.dev='lecithotrophic';
+        else if(/direct.develop/.test(vl))f.dev='direct';
+      }
+      if(!f.pldMin){
+        var dm=v.match(/(\d+)\s*(?:to\s*(\d+)\s*)?days?/i);
+        if(dm){f.pldMin=dm[1];if(dm[2])f.pldMax=dm[2];}
+        else{var wm=v.match(/(\d+)\s*(?:to\s*(\d+)\s*)?weeks?/i);if(wm){f.pldMin=String(parseInt(wm[1])*7);if(wm[2])f.pldMax=String(parseInt(wm[2])*7);}}
+      }
+    }
+  });
+  return f;
+}
+
+function applyTraits(f,source){
+  document.getElementById('devtype').value='unknown';
+  document.getElementById('lstage').value='';
+  document.getElementById('pld-hint').textContent='PLD not found \u2014 enter manually';
+  ['tc-dev','tc-ltype','tc-pmin','tc-pmax','tc-rep','tc-mob','tc-brd'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  if(f.dev){
+    var s=document.getElementById('devtype');var l=f.dev.toLowerCase();
+    if(/plankto/.test(l))s.value='planktotrophic';
+    else if(/lecitho/.test(l))s.value='lecithotrophic';
+    else if(/direct/.test(l))s.value='direct';
+  }
+  if(f.ltype)document.getElementById('lstage').value=f.ltype;
+  var pld=f.pldMin?parseFloat(f.pldMin):null;
+  if(pld&&!isNaN(pld)&&pld>0){
+    var slider=document.getElementById('pld');
+    slider.max=Math.ceil(Math.max(365,pld*1.5));
+    slider.value=Math.min(pld,slider.max);
+    document.getElementById('pldv').textContent=slider.value;
+    document.getElementById('pld-hint').textContent=(source||'Database')+': '+(f.pldMin||pld)+(f.pldMax?'\u2013'+f.pldMax:'')+' days';
+  }
+}
+
+function renderTraitChips(f){
+  var chips=[
+    {label:'Development',    key:'tc-dev',  val:f.dev,      ph:'e.g. planktotrophic'},
+    {label:'Larval type',    key:'tc-ltype',val:f.ltype,    ph:'e.g. Echinopluteus'},
+    {label:'PLD min (days)', key:'tc-pmin', val:f.pldMin,   ph:'e.g. 20'},
+    {label:'PLD max (days)', key:'tc-pmax', val:f.pldMax,   ph:'e.g. 40'},
+    {label:'Reproduction',   key:'tc-rep',  val:f.rep,      ph:'e.g. broadcast spawner'},
+    {label:'Mobility',       key:'tc-mob',  val:f.mob,      ph:'e.g. mobile, sessile'},
+    {label:'Brooding',       key:'tc-brd',  val:f.brooding, ph:'e.g. No, Yes'},
+  ];
+  var grid=document.getElementById('tgrid');
+  grid.innerHTML='';
+  chips.forEach(function(c){
+    var div=document.createElement('div');
+    div.className='tc'+(c.val?' filled':'');
+    div.innerHTML='<label>'+c.label+'</label><input type="text" id="'+c.key+'" value="'+(c.val||'')+'" placeholder="'+c.ph+'">';
+    div.querySelector('input').addEventListener('input',function(){
+      div.classList.toggle('filled',this.value.length>0);
+    });
+    grid.appendChild(div);
+  });
+  document.getElementById('traits-wrap').style.display='block';
+}
+
+function suggestPLDHint(){
+  var ph=document.getElementById('txgroup');
+  var phylum=ph?ph.value:'';
+  var hints={
+    'Bryozoa':'Typically 2\u20134 weeks (Cyphonautes larvae)',
+    'Echinodermata':'Typically 3\u20138 weeks (pluteus larvae)',
+    'Mollusca':'Typically 1\u20136 weeks depending on species',
+    'Annelida':'Typically 1\u20134 weeks (trochophore larvae)',
+    'Crustacea':'Typically 2\u20138 weeks depending on species',
+  };
+  var entries=Object.entries(hints);
+  for(var i=0;i<entries.length;i++){
+    if(phylum.includes(entries[i][0])){
+      document.getElementById('pld-hint').textContent=entries[i][1]+' \u2014 verify with literature';
+      break;
+    }
+  }
+}
+
+
+function setWSt(msg,type){
+  const el=document.getElementById('wst');
+  el.textContent=msg;el.className='wst'+(type?' '+type+' vis':'');
+}
+
+// ═══════════════════════════════════════════════════════
+// SITES
+// ═══════════════════════════════════════════════════════
+function renderSites(){
+  const tb=document.getElementById('stbody');
+  tb.innerHTML='';
+  const hasReal=sites.some(s=>!s.example);
+  document.getElementById('site-note').style.display=hasReal?'none':'block';
+  sites.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    if(s.example)tr.style.opacity='0.6';
+    tr.innerHTML=`
+      <td><input type="checkbox" ${s.on?'checked':''} onchange="sites[${i}].on=this.checked;updateSummary()"></td>
+      <td><span class="sdot" style="background:${s.color}"></span><input type="text" value="${s.code}" style="width:38px;font-family:'DM Mono',monospace;font-size:10px;background:transparent;border:none;color:var(--txt);outline:none" onchange="sites[${i}].code=this.value.toUpperCase()"></td>
+      <td><input type="text" value="${s.name}" style="width:80px;font-size:10px;background:transparent;border:none;color:var(--txt2);outline:none" onchange="sites[${i}].name=this.value"></td>
+      <td><input type="number" value="${s.lon}" step="0.001" onchange="sites[${i}].lon=parseFloat(this.value)"></td>
+      <td><input type="number" value="${s.lat}" step="0.001" onchange="sites[${i}].lat=parseFloat(this.value)"></td>
+      <td><button onclick="removeSite(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px" title="Remove">✕</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+  updateSummary();
+  refreshLeafletMarkers();
+}
+
+function addSite(){
+  const code=document.getElementById('nc').value.toUpperCase().trim();
+  const name=document.getElementById('nn').value.trim();
+  const lon=parseFloat(document.getElementById('nlon').value);
+  const lat=parseFloat(document.getElementById('nlat').value);
+  if(!code||!name||isNaN(lon)||isNaN(lat)){notify('Fill all fields.','err');return}
+  // Remove example site when first real site is added
+  sites=sites.filter(s=>!s.example);
+  sites.push({code,name,lon,lat,color:COLORS[sites.length%COLORS.length],on:true});
+  renderSites();
+  ['nc','nn','nlon','nlat'].forEach(id=>document.getElementById(id).value='');
+  notify('Site '+code+' added.','inf');
+}
+
+function removeSite(i){sites.splice(i,1);if(!sites.length)sites=[{code:'EX',name:'Example Site',lon:14.20,lat:40.80,color:'#8e24aa',on:true,example:true}];renderSites()}
+function clearSites(){sites=[{code:'EX',name:'Example Site',lon:14.20,lat:40.80,color:'#8e24aa',on:true,example:true}];renderSites()}
+function loadPreset(p){
+  sites=(p==='med'?MED_PRESET:ADR_PRESET).map((s,i)=>({...s,on:true}));
+  renderSites();notify('Loaded '+sites.length+' sites.','inf');
+}
+
+// ═══════════════════════════════════════════════════════
+// REPLICATES
+// ═══════════════════════════════════════════════════════
+function setRepUnit(u,btn){
+  repUnit=u;
+  document.querySelectorAll('.rep-unit-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function renderReps(){
+  const list=document.getElementById('rep-list');
+  list.innerHTML='';
+  reps.forEach((r,i)=>{
+    const div=document.createElement('div');
+    div.className='rep-row'+(r.on?' active-rep':'');
+    div.innerHTML=`
+      <input type="checkbox" ${r.on?'checked':''} onchange="reps[${i}].on=this.checked;this.closest('.rep-row').classList.toggle('active-rep',this.checked);updateSummary()">
+      <span class="rep-color" style="background:${r.color}"></span>
+      <input type="text" value="${r.name}" placeholder="Label" onchange="reps[${i}].name=this.value" title="Replicate label">
+      <input type="date" value="${r.date}" onchange="reps[${i}].date=this.value" title="Release date">
+      <button class="rep-del" onclick="reps.splice(${i},1);renderReps()" title="Remove">✕</button>
+    `;
+    list.appendChild(div);
+  });
+  updateSummary();
+}
+
+function addRep(){
+  const today=new Date();
+  const d=today.toISOString().slice(0,10);
+  reps.push({name:'Rep '+(reps.length+1),date:d,color:REP_COLORS[reps.length%REP_COLORS.length],on:true});
+  renderReps();
+}
+
+function loadRepPreset(p){
+  if(p==='monthly'){
+    reps=['Jan','Feb','Mar','Apr','May','Jun'].map((m,i)=>({
+      name:m,date:`1993-${String(i+1).padStart(2,'0')}-${i===0?'01':'02'}`,
+      color:REP_COLORS[i],on:true
+    }));
+  }else if(p==='seasons'){
+    reps=[
+      {name:'Winter',date:'1993-01-01',color:'#1565c0',on:true},
+      {name:'Spring',date:'1993-03-20',color:'#00897b',on:true},
+      {name:'Summer',date:'1993-06-21',color:'#f9a825',on:true},
+      {name:'Autumn',date:'1993-09-22',color:'#e65100',on:true},
+    ];
+  }else if(p==='weekly'){
+    reps=[1,2,3,4].map((w,i)=>({
+      name:'Week '+w,date:`1993-01-${String(i*7+1).padStart(2,'0')}`,
+      color:REP_COLORS[i],on:true
+    }));
+  }else if(p==='annual'){
+    reps=[1993,1994,1995,1996,1997].map((y,i)=>({
+      name:String(y),date:`${y}-01-01`,color:REP_COLORS[i],on:true
+    }));
+  }
+  renderReps();
+  notify('Loaded '+reps.length+' replicates.','inf');
+}
+
+// ═══════════════════════════════════════════════════════
+// SUMMARY
+// ═══════════════════════════════════════════════════════
+function updateSummary(){
+  const nS=sites.filter(s=>s.on).length;
+  const nR=reps.filter(r=>r.on).length;
+  const nP=parseInt(document.getElementById('npart').value)||300;
+  const tot=nS*nR*nP;
+  document.getElementById('sum-s').textContent=nS;
+  document.getElementById('sum-r').textContent=nR;
+  document.getElementById('sum-p').textContent=nP;
+  document.getElementById('sum-t').textContent=tot.toLocaleString();
+  document.getElementById('s-pt').textContent=tot.toLocaleString();
+  const b=Math.max(3,Math.round(tot/10800*45));
+  document.getElementById('sum-rt').textContent=`~${b} min (M2 Pro) / ~${Math.round(b*1.8)} min (Intel i7)`;
+}
+document.getElementById('npart').addEventListener('input',updateSummary);
+
+// ═══════════════════════════════════════════════════════
+// SERVER
+// ═══════════════════════════════════════════════════════
+function srv(){return document.getElementById('srv').value}
+
+async function checkSrv(){
+  const el=document.getElementById('srv-st');
+  el.textContent='Checking…';el.style.color='var(--muted)';
+  try{
+    const r=await fetch(srv()+'/health',{signal:AbortSignal.timeout(3000)});
+    if(r.ok){el.textContent='✓ Connected — backend ready';el.style.color='var(--foam)';notify('Backend connected.','inf')}
+    else throw new Error();
+  }catch{el.textContent='✗ Not reachable — start with: python backend/server.py';el.style.color='var(--coral)';notify('Cannot reach backend.','err')}
+}
+
+// ═══════════════════════════════════════════════════════
+// SIMULATION
+// ═══════════════════════════════════════════════════════
+async function runSim(){
+  if(simRunning)return;
+  const nc=document.getElementById('ncpath').value.trim();
+  if(!nc){notify('Set the CMEMS NetCDF file path in the Data tab.','err');return}
+  const aS=sites.filter(s=>s.on&&!s.example);
+  const aR=reps.filter(r=>r.on);
+  if(!aS.length){notify('Add and enable at least one real release site.','err');return}
+  if(!aR.length){notify('Add and enable at least one replicate.','err');return}
+
+  simRunning=true;elSec=0;
+  showProg();setSt('running','Running simulation…');
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-run').classList.add('running');
+  document.getElementById('run-lbl').textContent='Simulating…';
+  simTimer=setInterval(()=>{elSec++;document.getElementById('s-el').textContent=fmtT(elSec)},1000);
+
+  const pld_days=pldInDays();
+  const payload={
+    nc_file:nc, out_dir:document.getElementById('outpath').value||'./results',
+    year:parseInt(document.getElementById('simyr').value),
+    pld_days, n_particles:parseInt(document.getElementById('npart').value),
+    depth:parseFloat(document.getElementById('depth').value),
+    settle_km:parseInt(document.getElementById('setkm').value),
+    species_name:document.getElementById('sname').value,
+    larval_stage:document.getElementById('lstage').value,
+    dev_type:document.getElementById('devtype').value,
+    aphia_id:aphiaId,
+    sites:aS.map(s=>({code:s.code,name:s.name,lon:s.lon,lat:s.lat,color:s.color})),
+    replicates:aR.map(r=>({name:r.name,date:r.date,color:r.color})),
+  };
+  try{
+    const r=await fetch(srv()+'/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok){const e=await r.json();throw new Error(e.detail||'Server error')}
+    pollProg(payload.out_dir);
+  }catch(e){simErr(e.message)}
+}
+
+function pldInDays(){
+  const v=parseInt(document.getElementById('pld').value);
+  const u=document.getElementById('pld-unit').value;
+  if(u==='hours')return v/24;
+  if(u==='weeks')return v*7;
+  if(u==='months')return v*30;
+  return v;
+}
+
+async function pollProg(od){
+  try{
+    const r=await fetch(srv()+'/status');if(!r.ok)throw new Error();
+    const d=await r.json();
+    document.getElementById('pfill').style.width=(d.progress||0)+'%';
+    document.getElementById('msub').textContent=d.message||'Processing…';
+    document.getElementById('s-pr').textContent=(d.progress||0)+'%';
+    for(let i=0;i<4;i++){
+      const el=document.getElementById('st'+i);const ic=el.querySelector('.sicon');
+      el.classList.remove('active','done');ic.classList.remove('active','done');
+      if(i<(d.step||0)){el.classList.add('done');ic.classList.add('done');ic.textContent='✓'}
+      if(i===(d.step||0)){el.classList.add('active');ic.classList.add('active');ic.textContent=i+1}
+    }
+    if(d.done)simDone(od);else setTimeout(()=>pollProg(od),1500);
+  }catch{setTimeout(()=>pollProg(od),2000)}
+}
+
+async function simDone(od){
+  clearInterval(simTimer);hideProg();simRunning=false;
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-run').classList.remove('running');
+  document.getElementById('run-lbl').textContent='Run Simulation';
+  setSt('ready','Complete');document.getElementById('s-pr').textContent='100%';
+  try{
+    const r=await fetch(srv()+'/results?out_dir='+encodeURIComponent(od));
+    if(r.ok){const d=await r.json();displayRes(d)}
+  }catch{}
+  notify('Simulation complete!','inf');
+}
+
+function simErr(msg){
+  clearInterval(simTimer);hideProg();simRunning=false;
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-run').classList.remove('running');
+  document.getElementById('run-lbl').textContent='Run Simulation';
+  setSt('error','Error');notify('Error: '+msg,'err');
+}
+
+function cancelSim(){
+  fetch(srv()+'/cancel',{method:'POST'}).catch(()=>{});
+  clearInterval(simTimer);hideProg();simRunning=false;
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-run').classList.remove('running');
+  document.getElementById('run-lbl').textContent='Run Simulation';
+  setSt('ready','Cancelled');
+}
+
+// ═══════════════════════════════════════════════════════
+// RESULTS & FILE MANAGER
+// ═══════════════════════════════════════════════════════
+async function loadRes(){
+  const z=document.getElementById('zarr').value.trim();
+  if(!z){notify('Set results directory path.','err');return}
+  try{
+    const r=await fetch(srv()+'/results?out_dir='+encodeURIComponent(z));
+    if(!r.ok)throw new Error();
+    displayRes(await r.json());
+  }catch{notify('Cannot load results.','err')}
+}
+
+function displayRes(data){
+  if(data.figures){curFigs=data.figures;if(data.figures.overview)showFig(data.figures.overview);document.getElementById('ftabs').classList.add('vis')}
+  if(data.stats)renderStats(data.stats);
+  if(data.files)renderFileManager(data.files);
+  notify('Results loaded.','inf');
+}
+
+function renderStats(stats){
+  const c=document.getElementById('rcont');c.innerHTML='';
+  const g={};stats.forEach(r=>{if(!g[r.site])g[r.site]=[];g[r.site].push(r)});
+  Object.entries(g).forEach(([code,rows],idx)=>{
+    const s=sites.find(s=>s.code===code)||{color:'#aaa',name:code};
+    const mean=(rows.reduce((a,r)=>a+r.dist_mean_km,0)/rows.length).toFixed(0);
+    const max=Math.max(...rows.map(r=>r.dist_max_km)).toFixed(0);
+    const ret=(rows.reduce((a,r)=>a+r.pct_retained,0)/rows.length).toFixed(0);
+    const card=document.createElement('div');card.className='rcard';card.style.animationDelay=(idx*.07)+'s';
+    card.innerHTML=`<div class="rsite"><span class="sdot" style="background:${s.color}"></span>
+      <div><div class="rsname">${s.name||code}</div><div class="rscode">${code} · ${rows.length} rep.</div></div></div>
+      <div class="rmets">
+        <div class="mtr"><span class="mval">${mean}</span><span class="mlbl">Mean km</span></div>
+        <div class="mtr"><span class="mval">${max}</span><span class="mlbl">Max km</span></div>
+        <div class="mtr"><span class="mval">${ret}%</span><span class="mlbl">Retained</span></div>
+        <div class="mtr"><span class="mval">${rows.length}</span><span class="mlbl">Reps</span></div>
+      </div>
+      <div class="rbar"><div class="rbarfill" style="width:${ret}%;background:${s.color}"></div></div>`;
+    c.appendChild(card);
+  });
+}
+
+function renderFileManager(files){
+  const fl=document.getElementById('file-list');
+  fl.innerHTML='';
+  if(!files||!files.length){fl.innerHTML='<span style="font-size:10px;color:var(--muted)">No output files.</span>';return}
+  files.forEach(f=>{
+    const div=document.createElement('div');div.className='fitem';
+    div.innerHTML=`<span class="fitem-name">${f.name}</span>
+      <div class="fitem-btns">
+        <button class="fitem-btn dl" onclick="dlFile('${f.url}','${f.name}')">PNG</button>
+        ${f.svg_url?`<button class="fitem-btn" onclick="dlFile('${f.svg_url}','${f.name.replace(/\.png$/,'.svg')}')">SVG</button>`:''}
+        ${f.pdf_url?`<button class="fitem-btn" onclick="dlFile('${f.pdf_url}','${f.name.replace(/\.png$/,'.pdf')}')">PDF</button>`:''}
+        ${f.csv_url?`<button class="fitem-btn" onclick="dlFile('${f.csv_url}','${f.name.replace(/\.png$/,'.csv')}')">CSV</button>`:''}
+      </div>`;
+    fl.appendChild(div);
+  });
+}
+
+function dlFile(url,name){
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();
+}
+
+function toggleFilePanel(){document.getElementById('file-panel').classList.toggle('vis')}
+
+// ═══════════════════════════════════════════════════════
+// FIGURES
+// ═══════════════════════════════════════════════════════
+function showFig(src){
+  const img=document.getElementById('result-img');
+  img.src=src;img.style.display='block';
+  document.getElementById('mph').style.display='none';
+}
+function swFig(btn,t){document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(curFigs[t])showFig(curFigs[t])}
+function dlFig(){const img=document.getElementById('result-img');if(!img.src||img.style.display==='none'){notify('No figure.','err');return}const a=document.createElement('a');a.href=img.src;a.download='larval_dispersal_'+new Date().toISOString().slice(0,10)+'.png';a.click()}
+function openFig(){const img=document.getElementById('result-img');if(img.src&&img.style.display!=='none')window.open(img.src,'_blank')}
+
+// ═══════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════
+function showProg(){document.getElementById('pfill').style.width='0%';document.getElementById('prog-modal').classList.add('vis')}
+function hideProg(){document.getElementById('prog-modal').classList.remove('vis')}
+function showHelp(){document.getElementById('help-modal').classList.add('vis')}
+function closeHelp(){document.getElementById('help-modal').classList.remove('vis')}
+
+// ═══════════════════════════════════════════════════════
+// STATUS / UTILS
+// ═══════════════════════════════════════════════════════
+function setSt(st,txt){document.getElementById('sdot').className='sdotst '+st;document.getElementById('stxt').textContent=txt}
+function notify(msg,t){
+  const el=document.getElementById('notif');
+  const ic={ok:'✓',err:'✗',inf:'ℹ'}[t]||'';
+  el.textContent=ic+' '+msg;el.className='notif vis '+(t||'');
+  clearTimeout(notifTmr);notifTmr=setTimeout(()=>el.classList.remove('vis'),4500);
+}
+function fmtT(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+
+// ═══════════════════════════════════════════════════════
+// CMEMS DOWNLOAD WIZARD
+// ═══════════════════════════════════════════════════════
+
+// Default Mediterranean domain
+let dlDomain = { lonMin: 3.0, lonMax: 22.0, latMin: 35.0, latMax: 47.0 };
+
+function updateDomainFromSites() {
+  const realSites = sites.filter(s => !s.example && s.on);
+  if (!realSites.length) {
+    notify('Add sites first — using default Mediterranean domain.', 'inf');
+    dlDomain = { lonMin: 3.0, lonMax: 22.0, latMin: 35.0, latMax: 47.0 };
+  } else {
+    const lons = realSites.map(s => s.lon);
+    const lats = realSites.map(s => s.lat);
+    const pad  = 2.0; // degrees padding around sites
+    dlDomain = {
+      lonMin: Math.max(-180, Math.min(...lons) - pad),
+      lonMax: Math.min(180,  Math.max(...lons) + pad),
+      latMin: Math.max(-90,  Math.min(...lats) - pad),
+      latMax: Math.min(90,   Math.max(...lats) + pad),
+    };
+    notify(`Domain updated from ${realSites.length} sites.`, 'inf');
+  }
+  document.getElementById('domain-info').innerHTML =
+    `Lon: ${dlDomain.lonMin.toFixed(1)} – ${dlDomain.lonMax.toFixed(1)} °E &nbsp;|&nbsp; ` +
+    `Lat: ${dlDomain.latMin.toFixed(1)} – ${dlDomain.latMax.toFixed(1)} °N<br>` +
+    `<span style="color:var(--muted);font-size:9px">Based on your ${realSites.length} site(s) ± 2° padding</span>`;
+  genCmd();
+}
+
+function genCmd() {
+  const yrS    = document.getElementById('dl-yr-start').value;
+  const yrE    = document.getElementById('dl-yr-end').value;
+  const folder = document.getElementById('dl-folder').value.trim() || '/path/to/data/';
+  const fname  = document.getElementById('dl-fname').value.trim()  || 'med_currents.nc';
+  const d      = dlDomain;
+
+  const cmd =
+`copernicusmarine subset \\
+  --dataset-id cmems_mod_med_phy-cur_my_4.2km_P1D-m \\
+  --variable uo \\
+  --variable vo \\
+  --minimum-longitude ${d.lonMin.toFixed(1)} \\
+  --maximum-longitude ${d.lonMax.toFixed(1)} \\
+  --minimum-latitude  ${d.latMin.toFixed(1)} \\
+  --maximum-latitude  ${d.latMax.toFixed(1)} \\
+  --minimum-depth 1 \\
+  --maximum-depth 43 \\
+  --start-datetime ${yrS}-01-01T00:00:00 \\
+  --end-datetime   ${yrE}-12-31T23:59:59 \\
+  --output-filename ${fname} \\
+  --output-directory ${folder}`;
+
+  document.getElementById('dl-cmd').value = cmd;
+
+  // Auto-suggest the NC file path
+  const fullPath = folder.replace(/\/$/, '') + '/' + fname;
+  if (!document.getElementById('ncpath').value) {
+    document.getElementById('ncpath').placeholder = fullPath;
+  }
+}
+
+function copyCmd() {
+  const cmd = document.getElementById('dl-cmd').value;
+  navigator.clipboard.writeText(cmd)
+    .then(() => notify('Command copied to clipboard.', 'ok'))
+    .catch(() => notify('Select the command text and copy manually.', 'inf'));
+}
+
+function autoFillPath() {
+  const folder = document.getElementById('dl-folder').value.trim() || '';
+  const fname  = document.getElementById('dl-fname').value.trim()  || 'med_currents.nc';
+  if (!folder) {
+    notify('Set the download folder in Step ② first.', 'err'); return;
+  }
+  const fullPath = folder.replace(/\/$/, '') + '/' + fname;
+  document.getElementById('ncpath').value = fullPath;
+  syncNcPath();
+  notify('Path filled from download settings.', 'inf');
+}
+
+function syncNcPath() {
+  // Keep outpath suggestion in sync
+  const nc = document.getElementById('ncpath').value;
+  if (nc && !document.getElementById('outpath').value) {
+    const dir = nc.substring(0, nc.lastIndexOf('/') + 1);
+    document.getElementById('outpath').placeholder = dir + 'results/';
+  }
+}
+
+async function verifyFile() {
+  const nc  = document.getElementById('ncpath').value.trim();
+  const el  = document.getElementById('verify-st');
+  if (!nc) { el.textContent = '✗ Enter the file path first.'; el.style.color = 'var(--coral)'; return; }
+  el.textContent = 'Checking…'; el.style.color = 'var(--muted)';
+  try {
+    const r = await fetch(srv() + '/verify_nc?path=' + encodeURIComponent(nc));
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    if (d.valid) {
+      el.innerHTML = `✓ File OK — variables: ${d.variables.join(', ')} · timesteps: ${d.timesteps} · ${d.date_range}`;
+      el.style.color = 'var(--foam)';
+    } else {
+      el.textContent = '✗ ' + (d.error || 'File not valid');
+      el.style.color = 'var(--coral)';
+    }
+  } catch {
+    el.textContent = '✗ Cannot verify — check server connection (Step ⑤) or path.';
+    el.style.color = 'var(--coral)';
+  }
+}
+
+// Regenerate command when year selectors change
+['dl-yr-start','dl-yr-end'].forEach(id =>
+  document.getElementById(id)?.addEventListener('change', genCmd));
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderSites();
+loadRepPreset('monthly');  // default replicates
+updateSummary();
+genCmd();  // generate initial download command
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{
+  "title": "Marine Larval Dispersal — Graphical User Interface (marine-larval-dispersal-gui)",
+  "description": "Browser-based graphical interface for the Marine Larval Dispersal simulation pipeline. Provides a FastAPI backend connecting an HTML/JS frontend to OceanParcels 3.0.2 simulations forced by CMEMS Mediterranean ocean reanalysis. Features WoRMS species search API integration, CMEMS download wizard, multi-platform installers (macOS/Linux/Windows), real-time simulation progress, and publication-quality figure export. Companion to: https://doi.org/10.5281/zenodo.19955061",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "language": "eng",
+  "version": "1.0.0",
+  "keywords": [
+    "GUI",
+    "graphical interface",
+    "larval dispersal",
+    "OceanParcels",
+    "CMEMS",
+    "FastAPI",
+    "marine connectivity",
+    "WoRMS",
+    "Mediterranean Sea",
+    "Python",
+    "open-source"
+  ],
+  "creators": [
+    {
+      "name": "[Patti], [Francesco Paolo]",
+      "affiliation": "[Zoological Station Anton Dohrn]",
+      "orcid": "[https://orcid.org/0000-0002-7975-2947]"
+    }
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.19955061",
+      "relation": "isSupplementTo",
+      "scheme": "doi",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://github.com/CyberTechSea/marine-larval-dispersal",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.48670/mds-00375",
+      "relation": "uses",
+      "scheme": "doi",
+      "resource_type": "dataset"
+    },
+    {
+      "identifier": "10.5194/gmd-12-3571-2019",
+      "relation": "references",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    }
+  ],
+  "notes": "Requires companion repository for simulation scripts: https://github.com/CyberTechSea/marine-larval-dispersal (DOI: 10.5281/zenodo.19955061). CMEMS forcing data available at https://marine.copernicus.eu (free registration). See README for installation and usage instructions."
+}
