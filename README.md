@@ -231,7 +231,7 @@ def boundary_check(particle, fieldset, time):
 | Repository | Contents | DOI |
 |------------|----------|-----|
 | [marine-larval-dispersal](https://github.com/CyberTechSea/marine-larval-dispersal) | Simulation scripts, methods, scientific documentation | [10.5281/zenodo.19955061](https://doi.org/10.5281/zenodo.19955061) |
-| [marine-larval-dispersal-gui](https://github.com/CyberTechSea/marine-larval-dispersal-gui) | This repository — GUI frontend and backend | [DOI pending] |
+| [marine-larval-dispersal-gui](https://github.com/CyberTechSea/marine-larval-dispersal-gui) | This repository — GUI frontend and backend | (https://doi.org/10.5281/zenodo.20005233) |
 
 ---
 
