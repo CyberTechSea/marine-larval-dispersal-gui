@@ -245,8 +245,8 @@ If you use this GUI in your research, please cite both repositories:
 > https://doi.org/10.5281/zenodo.19955061
 
 **GUI:**
-> [CyberTechSea] (2026). Marine Larval Dispersal — Graphical User Interface (v1.0.0).
-> Zenodo. https://doi.org/[GUI-DOI-PENDING]
+> Francesco Paolo Patti Zoological Station Anton Dohrn (2026). Marine Larval Dispersal — Graphical User Interface (v1.0.0).
+> Zenodo. https://doi.org/10.5281/zenodo.20005233
 > GitHub: https://github.com/CyberTechSea/marine-larval-dispersal-gui
 
 ---
