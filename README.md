@@ -240,7 +240,7 @@ def boundary_check(particle, fieldset, time):
 If you use this GUI in your research, please cite both repositories:
 
 **Simulation pipeline:**
-> [CyberTechSea] (2026). A Validated Python Pipeline for Coastal Lagrangian
+> Francesco Paolo Patti Zoological Station Anton Dohrn (2026). A Validated Python Pipeline for Coastal Lagrangian
 > Dispersal Modelling with OceanParcels 3.x and CMEMS (v1.0.0). Zenodo.
 > https://doi.org/10.5281/zenodo.19955061
 
